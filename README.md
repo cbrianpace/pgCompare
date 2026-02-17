@@ -68,6 +68,15 @@ By default, the application looks for the properties file in the execution direc
 
 At a minimal the `repo-xxxxx` parameters are required in the properties file (or specified by environment parameters).  Besides the properties file and environment variables, another alternative is to store the property settings in the `dc_project` table.  Settings can be stored in the `project_config` column in JSON format ({"parameter": "value"}).  Certain system parameters like log-destination can only be specified via the properties file or environment variables.
 
+You can also import/export configuration using the CLI:
+```shell
+# Export project configuration to properties file
+java -jar pgcompare.jar export-config -p 1 --file project-config.properties
+
+# Import properties file to project configuration  
+java -jar pgcompare.jar import-config -p 1 --file my-config.properties
+```
+
 ## 4. Initialize Repository
 
 Run the script or use the command below to set up the PostgreSQL repository:
@@ -97,17 +106,25 @@ Actions:
 - **compare**:  Perform database compare
 - **copy-table**: Copy pgCompare metadata for table.  Must specify table alias to copy using --table option
 - **discover**:  Disocver tables and columns
+- **export-config**: Export project configuration to properties file
+- **export-mapping**: Export table/column mappings to YAML file
+- **import-config**: Import properties file to project configuration
+- **import-mapping**: Import table/column mappings from YAML file
 - **init**: Initialize the repository database
 
 Options:
 
    -b|--batch {batch nbr}
 
+   -o|--file {path} File for export/import operations
+
+   --overwrite Overwrite existing mappings during import
+
    -p|--project Project ID
 
    -r|--report {file} Create html report of compare
 
-   -t|--table {target table}
+   -t|--table {target table} (supports wildcards for export/import)
 
    --help
 

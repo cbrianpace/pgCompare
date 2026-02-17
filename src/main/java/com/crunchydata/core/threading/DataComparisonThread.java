@@ -23,6 +23,7 @@ import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.concurrent.BlockingQueue;
 
+import com.crunchydata.config.ApplicationState;
 import com.crunchydata.controller.RepoController;
 import com.crunchydata.model.ColumnMetadata;
 import com.crunchydata.model.DataComparisonTable;
@@ -122,6 +123,8 @@ public class DataComparisonThread extends Thread {
             //conn.setAutoCommit(false);
             stmt = conn.prepareStatement(sql);
             stmt.setFetchSize(fetchSize);
+            
+            ApplicationState.getInstance().registerStatement(stmt);
             rs = stmt.executeQuery();
 
             StringBuilder columnValue = new StringBuilder();
@@ -135,6 +138,15 @@ public class DataComparisonThread extends Thread {
             DataComparisonResult[] dc = new DataComparisonResult[batchCommitSize];
 
             while (rs.next()) {
+                if (ApplicationState.getInstance().isImmediateTerminationRequested()) {
+                    LoggingUtils.write("info", threadName, String.format("(%s) Immediate termination requested - stopping now", targetType));
+                    break;
+                }
+                if (ts.isShutdownRequested()) {
+                    LoggingUtils.write("info", threadName, String.format("(%s) Shutdown requested - stopping gracefully", targetType));
+                    break;
+                }
+
                 columnValue.setLength(0);
 
                 if (! useDatabaseHash) {
@@ -350,6 +362,8 @@ public class DataComparisonThread extends Thread {
      */
     private void cleanupResources(String threadName, ResultSet rs, PreparedStatement stmt, 
                                 PreparedStatement stmtLoad, Connection connRepo, Connection conn) {
+        ApplicationState.getInstance().unregisterStatement(stmt);
+        
         try {
             if (rs != null) {
                 rs.close();

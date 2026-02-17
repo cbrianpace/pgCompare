@@ -16,6 +16,7 @@
 
 package com.crunchydata.core.threading;
 
+import com.crunchydata.config.ApplicationState;
 import com.crunchydata.controller.RepoController;
 import com.crunchydata.model.ColumnMetadata;
 import com.crunchydata.model.DataComparisonTable;
@@ -200,6 +201,11 @@ public class ThreadManager {
         
         LoggingUtils.write("info", THREAD_NAME, "Waiting for reconcile threads to complete");
         joinThreads(observerList);
+        
+        if (ApplicationState.getInstance().isShutdownRequested()) {
+            LoggingUtils.write("info", THREAD_NAME, "Graceful shutdown completed");
+            ApplicationState.getInstance().markShutdownComplete();
+        }
         
         LoggingUtils.write("info", THREAD_NAME, "All reconciliation threads completed");
     }

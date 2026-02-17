@@ -27,6 +27,7 @@ import java.util.Objects;
 import java.util.Properties;
 
 import static com.crunchydata.config.sql.RepoSQLConstants.*;
+import static com.crunchydata.config.sql.ServerModeSQLConstants.*;
 
 /**
  * Utility class for creating repository schema, tables, indexes, and constraints.
@@ -139,7 +140,11 @@ public class RepositoryInitializationService {
             REPO_DDL_DC_TABLE_COLUMN_MAP,
             REPO_DDL_DC_TABLE_HISTORY,
             REPO_DDL_DC_TABLE_MAP,
-            REPO_DDL_DC_TARGET
+            REPO_DDL_DC_TARGET,
+            REPO_DDL_DC_SERVER,
+            REPO_DDL_DC_JOB,
+            REPO_DDL_DC_JOB_CONTROL,
+            REPO_DDL_DC_JOB_PROGRESS
         );
         
         LoggingUtils.write("info", THREAD_NAME, "Creating repository tables");
@@ -160,7 +165,13 @@ public class RepositoryInitializationService {
             REPO_DDL_DC_TABLE_COLUMN_IDX1,
             REPO_DDL_DC_TABLE_COLUMN_FK,
             REPO_DDL_DC_TABLE_MAP_FK,
-            REPO_DDL_DC_TABLE_COLUMN_MAP_FK
+            REPO_DDL_DC_TABLE_COLUMN_MAP_FK,
+            REPO_DDL_DC_SERVER_IDX1,
+            REPO_DDL_DC_JOB_IDX1,
+            REPO_DDL_DC_JOB_IDX2,
+            REPO_DDL_DC_JOB_FK1,
+            REPO_DDL_DC_JOB_CONTROL_FK1,
+            REPO_DDL_DC_JOB_PROGRESS_FK1
         );
         
         LoggingUtils.write("info", THREAD_NAME, "Creating indexes and constraints");

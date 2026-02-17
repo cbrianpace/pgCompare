@@ -16,12 +16,15 @@
 
 package com.crunchydata.config;
 
+import java.net.InetAddress;
 import java.sql.Connection;
 
 import static com.crunchydata.service.DatabaseConnectionService.getConnection;
 import static com.crunchydata.config.Settings.*;
 
 import com.crunchydata.service.RepositoryInitializationService;
+import com.crunchydata.service.ServerModeService;
+import com.crunchydata.service.SignalHandlerService;
 import com.crunchydata.util.LoggingUtils;
 import com.crunchydata.util.ValidationUtils;
 
@@ -41,6 +44,11 @@ public class ApplicationContext {
     private static final String THREAD_NAME = "main";
     private static final String ACTION_CHECK = "check";
     private static final String ACTION_INIT = "init";
+    private static final String ACTION_EXPORT_CONFIG = "export-config";
+    private static final String ACTION_EXPORT_MAPPING = "export-mapping";
+    private static final String ACTION_IMPORT_CONFIG = "import-config";
+    private static final String ACTION_IMPORT_MAPPING = "import-mapping";
+    private static final String ACTION_SERVER = "server";
     private static final String CONN_TYPE_POSTGRES = "postgres";
     private static final String CONN_TYPE_REPO = "repo";
     private static final String CONN_TYPE_SOURCE = "source";
@@ -100,14 +108,17 @@ public class ApplicationContext {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> 
             LoggingUtils.write("info", THREAD_NAME, "Shutting down")));
 
+        // Register signal handlers for graceful shutdown and config reload
+        SignalHandlerService.initialize();
+
         // Log startup information
         logStartupInfo();
         
         // Connect to repository database
         connectToRepository();
         
-        // Load project configuration (skip for init action)
-        if (!action.equals(ACTION_INIT)) {
+        // Load project configuration (skip for init and server actions)
+        if (!action.equals(ACTION_INIT) && !action.equals(ACTION_SERVER)) {
             setProjectConfig(connRepo, pid);
         }
 
@@ -130,8 +141,9 @@ public class ApplicationContext {
      * 
      */
     public void executeAction() {
-        // Connect to source and target databases (skip for init action)
-        if (!action.equals(ACTION_INIT)) {
+        // Connect to source and target databases (skip for init, server, and config/mapping actions)
+        if (!action.equals(ACTION_INIT) && !action.equals(ACTION_SERVER) && !action.equals(ACTION_EXPORT_MAPPING) && !action.equals(ACTION_IMPORT_MAPPING) 
+                && !action.equals(ACTION_EXPORT_CONFIG) && !action.equals(ACTION_IMPORT_CONFIG)) {
             connectToSourceAndTarget();
         }
 
@@ -146,6 +158,21 @@ public class ApplicationContext {
                 break;
             case "copy-table":
                 performCopyTable();
+                break;
+            case "export-config":
+                performExportConfig();
+                break;
+            case "export-mapping":
+                performExportMapping();
+                break;
+            case "import-config":
+                performImportConfig();
+                break;
+            case "import-mapping":
+                performImportMapping();
+                break;
+            case "server":
+                performServerMode();
                 break;
             default:
                 throw new IllegalArgumentException("Invalid action specified: " + action);
@@ -232,5 +259,65 @@ public class ApplicationContext {
      */
     private void performCopyTable() {
         com.crunchydata.controller.TableController.performCopyTable(this);
+    }
+
+    private void performExportMapping() {
+        String tableFilter = Props.getProperty("table", "");
+        String outputFile = Props.getProperty("mappingFile", "");
+        com.crunchydata.controller.MappingController.performExport(connRepo, pid, tableFilter, outputFile);
+    }
+
+    private void performImportMapping() {
+        String tableFilter = Props.getProperty("table", "");
+        String inputFile = Props.getProperty("mappingFile", "");
+        boolean overwrite = Boolean.parseBoolean(Props.getProperty("overwrite", "false"));
+        com.crunchydata.controller.MappingController.performImport(connRepo, pid, tableFilter, inputFile, overwrite);
+    }
+
+    private void performExportConfig() {
+        String outputFile = Props.getProperty("mappingFile", "");
+        try {
+            com.crunchydata.service.ConfigExportService.exportToProperties(connRepo, pid, outputFile);
+        } catch (Exception e) {
+            LoggingUtils.write("severe", THREAD_NAME, String.format("Export config failed: %s", e.getMessage()));
+            throw new RuntimeException("Failed to export configuration", e);
+        }
+    }
+
+    private void performImportConfig() {
+        String inputFile = Props.getProperty("mappingFile", "");
+        if (inputFile == null || inputFile.isEmpty()) {
+            throw new IllegalArgumentException("Input file path is required for import-config. Use --file parameter.");
+        }
+        try {
+            com.crunchydata.service.ConfigImportService.importFromProperties(connRepo, pid, inputFile);
+        } catch (Exception e) {
+            LoggingUtils.write("severe", THREAD_NAME, String.format("Import config failed: %s", e.getMessage()));
+            throw new RuntimeException("Failed to import configuration", e);
+        }
+    }
+
+    private void performServerMode() {
+        LoggingUtils.write("info", THREAD_NAME, "Starting pgCompare in server mode");
+        String serverName = Props.getProperty("serverName", getDefaultServerName());
+        
+        ServerModeService serverService = new ServerModeService(connRepo, serverName);
+        
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            LoggingUtils.write("info", THREAD_NAME, "Shutdown hook triggered - stopping server");
+            serverService.stop();
+        }));
+        
+        serverService.start();
+    }
+
+    private String getDefaultServerName() {
+        try {
+            String hostname = InetAddress.getLocalHost().getHostName();
+            int dotIndex = hostname.indexOf('.');
+            return dotIndex > 0 ? hostname.substring(0, dotIndex) : hostname;
+        } catch (Exception e) {
+            return "pgcompare-server";
+        }
     }
 }

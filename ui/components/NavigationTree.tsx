@@ -1,14 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { ChevronRight, ChevronDown, Folder, Table, X, Plus } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { ChevronRight, ChevronDown, Folder, Table, X, Plus, Search, Upload } from 'lucide-react';
 import { Project, Table as TableType, Result } from '@/lib/types';
+import { toast } from '@/components/Toaster';
 
 interface NavigationTreeProps {
   onProjectSelect: (projectId: number) => void;
   onTableSelect: (tableId: number) => void;
   selectedProjectId?: number;
   selectedTableId?: number;
+  refreshTrigger?: number;
 }
 
 export default function NavigationTree({
@@ -16,6 +18,7 @@ export default function NavigationTree({
   onTableSelect,
   selectedProjectId,
   selectedTableId,
+  refreshTrigger,
 }: NavigationTreeProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [expandedProjects, setExpandedProjects] = useState<Set<number>>(new Set());
@@ -24,10 +27,28 @@ export default function NavigationTree({
   const [loading, setLoading] = useState(true);
   const [creatingProject, setCreatingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [importingProject, setImportingProject] = useState(false);
+  const [importProjectName, setImportProjectName] = useState('');
+  const [importFile, setImportFile] = useState<File | null>(null);
+
+  const filteredProjects = useMemo(() => {
+    if (!searchQuery.trim()) return projects;
+    
+    const query = searchQuery.toLowerCase();
+    return projects.filter(project => {
+      const projectMatches = project.project_name.toLowerCase().includes(query);
+      const tables = projectTables.get(project.pid) || [];
+      const hasMatchingTable = tables.some(table => 
+        table.table_alias.toLowerCase().includes(query)
+      );
+      return projectMatches || hasMatchingTable;
+    });
+  }, [projects, projectTables, searchQuery]);
 
   useEffect(() => {
     loadProjects();
-  }, []);
+  }, [refreshTrigger]);
 
   const loadProjects = async () => {
     try {
@@ -124,9 +145,69 @@ export default function NavigationTree({
       
       // Select the newly created project
       onProjectSelect(newProject.pid);
+      toast.success(`Project "${newProjectName.trim()}" created`);
     } catch (error) {
       console.error('Failed to create project:', error);
-      alert('Failed to create project');
+      toast.error('Failed to create project');
+    }
+  };
+
+  const handleImportProject = async () => {
+    if (!importProjectName.trim()) {
+      toast.error('Please enter a project name');
+      return;
+    }
+    if (!importFile) {
+      toast.error('Please select a properties file');
+      return;
+    }
+
+    try {
+      const text = await importFile.text();
+      const lines = text.split('\n');
+      const configObject: Record<string, any> = {};
+
+      lines.forEach(line => {
+        const trimmedLine = line.trim();
+        if (!trimmedLine || trimmedLine.startsWith('#') || trimmedLine.startsWith('!')) {
+          return;
+        }
+        const separatorIndex = trimmedLine.indexOf('=');
+        if (separatorIndex > 0) {
+          const key = trimmedLine.substring(0, separatorIndex).trim();
+          const value = trimmedLine.substring(separatorIndex + 1).trim();
+          try {
+            configObject[key] = JSON.parse(value);
+          } catch {
+            configObject[key] = value;
+          }
+        }
+      });
+
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          project_name: importProjectName.trim(),
+          project_config: configObject
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create project');
+      }
+
+      const newProject = await response.json();
+      setProjects([...projects, newProject]);
+      setImportProjectName('');
+      setImportFile(null);
+      setImportingProject(false);
+      
+      onProjectSelect(newProject.pid);
+      toast.success(`Project "${importProjectName.trim()}" imported with ${Object.keys(configObject).length} properties`);
+    } catch (error) {
+      console.error('Failed to import project:', error);
+      toast.error('Failed to import project');
     }
   };
 
@@ -154,16 +235,45 @@ export default function NavigationTree({
 
   return (
     <div className="p-4 space-y-1">
-      {/* Add New Project Button */}
-      {!creatingProject ? (
-        <button
-          onClick={() => setCreatingProject(true)}
-          className="w-full flex items-center gap-2 px-2 py-2 mb-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
-        >
-          <Plus className="h-4 w-4" />
-          New Project
-        </button>
-      ) : (
+      {/* Search Input */}
+      <div className="relative mb-3">
+        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search projects/tables..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-8 pr-8 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Add New Project / Import Project Buttons */}
+      {!creatingProject && !importingProject ? (
+        <div className="flex gap-2 mb-2">
+          <button
+            onClick={() => setCreatingProject(true)}
+            className="flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
+          >
+            <Plus className="h-4 w-4" />
+            New
+          </button>
+          <button
+            onClick={() => setImportingProject(true)}
+            className="flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
+          >
+            <Upload className="h-4 w-4" />
+            Import
+          </button>
+        </div>
+      ) : creatingProject ? (
         <div className="mb-2 p-2 border border-blue-500 rounded bg-blue-50 dark:bg-blue-900/20">
           <input
             type="text"
@@ -199,12 +309,56 @@ export default function NavigationTree({
             </button>
           </div>
         </div>
+      ) : (
+        <div className="mb-2 p-2 border border-green-500 rounded bg-green-50 dark:bg-green-900/20">
+          <input
+            type="text"
+            value={importProjectName}
+            onChange={(e) => setImportProjectName(e.target.value)}
+            placeholder="Project name..."
+            autoFocus
+            className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded mb-2 dark:bg-gray-700 dark:text-white"
+          />
+          <input
+            type="file"
+            accept=".properties,.txt"
+            onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+            className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded mb-2 dark:bg-gray-700 dark:text-white"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={handleImportProject}
+              disabled={!importProjectName.trim() || !importFile}
+              className="flex-1 px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+            >
+              Import
+            </button>
+            <button
+              onClick={() => {
+                setImportingProject(false);
+                setImportProjectName('');
+                setImportFile(null);
+              }}
+              className="flex-1 px-2 py-1 text-xs bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-400 dark:hover:bg-gray-500"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Projects List */}
-      {projects.map((project) => {
+      {filteredProjects.length === 0 && searchQuery && (
+        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+          No results found for "{searchQuery}"
+        </p>
+      )}
+      {filteredProjects.map((project) => {
         const isExpanded = expandedProjects.has(project.pid);
-        const tables = projectTables.get(project.pid) || [];
+        const allTables = projectTables.get(project.pid) || [];
+        const tables = searchQuery 
+          ? allTables.filter(t => t.table_alias.toLowerCase().includes(searchQuery.toLowerCase()))
+          : allTables;
         const isSelected = selectedProjectId === project.pid;
 
         return (

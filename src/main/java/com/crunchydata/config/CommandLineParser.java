@@ -85,6 +85,11 @@ public class CommandLineParser {
             }
 
             Props.setProperty("fix", String.valueOf(cmd.hasOption("fix")));
+            Props.setProperty("overwrite", String.valueOf(cmd.hasOption("overwrite")));
+            Props.setProperty("mappingFile", cmd.getOptionValue("file", ""));
+            if (cmd.hasOption("name")) {
+                Props.setProperty("serverName", cmd.getOptionValue("name"));
+            }
 
             Integer batchParameter = (cmd.hasOption("batch")) ?
                     Integer.parseInt(cmd.getOptionValue("batch")) :
@@ -114,10 +119,13 @@ public class CommandLineParser {
         options.addOption(new Option("b", "batch", true, "Batch Number"));
         options.addOption(new Option("h", "help", false, "Usage and help"));
         options.addOption(new Option("f", "fix", false, "Generate SQL to fix out of sync issue (experimental, use with caution)"));
+        options.addOption(new Option("o", "file", true, "File path for export/import operations"));
+        options.addOption(new Option(null, "overwrite", false, "Overwrite existing mappings during import"));
         options.addOption(new Option("p", "project", true, "Project ID"));
         options.addOption(new Option("r", "report", true, "Generate report"));
-        options.addOption(new Option("t", "table", true, "Limit to specified table"));
+        options.addOption(new Option("t", "table", true, "Limit to specified table (supports wildcards for export/import)"));
         options.addOption(new Option("v", "version", false, "Version"));
+        options.addOption(new Option("n", "name", true, "Server name (for server mode)"));
 
         return options;
     }
@@ -130,16 +138,24 @@ public class CommandLineParser {
         System.out.println("pgcompare <action> <options>");
         System.out.println();
         System.out.println("Actions:");
-        System.out.println("   check         Recompare the out of sync rows from previous compare");
-        System.out.println("   compare       Perform database compare");
-        System.out.println("   copy-table    Copy pgCompare metadata for table.  Must specify table alias to copy using --table option");
-        System.out.println("   discover      Discover tables and columns");
-        System.out.println("   init          Initialize the repository database");
+        System.out.println("   check           Recompare the out of sync rows from previous compare");
+        System.out.println("   compare         Perform database compare");
+        System.out.println("   copy-table      Copy pgCompare metadata for table.  Must specify table alias to copy using --table option");
+        System.out.println("   discover        Discover tables and columns");
+        System.out.println("   export-config   Export project configuration to properties file (requires --file)");
+        System.out.println("   export-mapping  Export table/column mappings to YAML file");
+        System.out.println("   import-config   Import properties file to project configuration");
+        System.out.println("   import-mapping  Import table/column mappings from YAML file");
+        System.out.println("   init            Initialize the repository database");
+        System.out.println("   server          Run in server mode (daemon that polls work queue)");
         System.out.println("Options:");
         System.out.println("   -b|--batch <batch nbr>");
-        System.out.println("   -p|--project Project ID");
-        System.out.println("   -r|--report <file> Create html report of compare");
-        System.out.println("   -t|--table <target table>");
+        System.out.println("   -n|--name <server name>  Server name for server mode (default: pgcompare-server)");
+        System.out.println("   -o|--file <path>     File path for export/import (default: pgcompare-mappings-<pid>.yaml)");
+        System.out.println("   --overwrite          Overwrite existing mappings during import");
+        System.out.println("   -p|--project         Project ID");
+        System.out.println("   -r|--report <file>   Create html report of compare");
+        System.out.println("   -t|--table <pattern> Limit to specified table (supports wildcards * for export/import)");
         System.out.println("   --help");
         System.out.println();
     }

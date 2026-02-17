@@ -16,6 +16,8 @@
 
 package com.crunchydata.core.threading;
 
+import com.crunchydata.config.ApplicationState;
+
 /**
  * Utility class for thread synchronization.
  *
@@ -82,6 +84,15 @@ public class ThreadSync {
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
+    }
+
+    /**
+     * Check if a graceful shutdown has been requested.
+     *
+     * @return true if shutdown was requested via signal
+     */
+    public boolean isShutdownRequested() {
+        return ApplicationState.getInstance().isShutdownRequested();
     }
 
 }

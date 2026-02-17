@@ -22,6 +22,7 @@ import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 
+import com.crunchydata.config.ApplicationState;
 import com.crunchydata.controller.RepoController;
 import com.crunchydata.model.DataComparisonTable;
 import com.crunchydata.core.database.SQLExecutionHelper;
@@ -178,6 +179,15 @@ public class ObserverThread extends Thread  {
             int tmpRowCount;
 
             while (lastRun <= MAX_LAST_RUN_COUNT) {
+                if (ApplicationState.getInstance().isImmediateTerminationRequested()) {
+                    LoggingUtils.write("info", threadName, "Immediate termination requested - stopping now");
+                    break;
+                }
+                if (ApplicationState.getInstance().isShutdownRequested()) {
+                    LoggingUtils.write("info", threadName, "Shutdown requested - completing current reconciliation");
+                    break;
+                }
+
                 // Remove matching rows
                 tmpRowCount = stmtSU.executeUpdate();
                 cntEqual += tmpRowCount;

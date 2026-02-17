@@ -7,12 +7,15 @@ import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import { formatDistanceToNow } from 'date-fns';
 import CompareDetailsModal from './CompareDetailsModal';
 import ProjectCurrentRunPanel from './ProjectCurrentRunPanel';
+import ConfigEditor from './ConfigEditor';
+import { toast } from '@/components/Toaster';
 
 interface ProjectViewProps {
   projectId: number;
+  onProjectUpdated?: () => void;
 }
 
-export default function ProjectView({ projectId }: ProjectViewProps) {
+export default function ProjectView({ projectId, onProjectUpdated }: ProjectViewProps) {
   const [project, setProject] = useState<Project | null>(null);
   const [results, setResults] = useState<Result[]>([]);
   const [configData, setConfigData] = useState<Array<{ key: string; value: string }>>([]);
@@ -22,7 +25,6 @@ export default function ProjectView({ projectId }: ProjectViewProps) {
   const [projectName, setProjectName] = useState('');
   const [selectedResult, setSelectedResult] = useState<Result | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadProject();
@@ -60,20 +62,6 @@ export default function ProjectView({ projectId }: ProjectViewProps) {
     }
   };
 
-  const handleConfigChange = (index: number, field: 'key' | 'value', value: string) => {
-    const newConfig = [...configData];
-    newConfig[index][field] = value;
-    setConfigData(newConfig);
-  };
-
-  const addConfigRow = () => {
-    setConfigData([...configData, { key: '', value: '' }]);
-  };
-
-  const removeConfigRow = (index: number) => {
-    setConfigData(configData.filter((_, i) => i !== index));
-  };
-
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -89,7 +77,7 @@ export default function ProjectView({ projectId }: ProjectViewProps) {
         }
       });
 
-      await fetch(`/api/projects/${projectId}`, {
+      const response = await fetch(`/api/projects/${projectId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -98,16 +86,23 @@ export default function ProjectView({ projectId }: ProjectViewProps) {
         }),
       });
 
+      if (!response.ok) {
+        throw new Error('Failed to save');
+      }
+
       // Update local state
       if (project) {
         setProject({ ...project, project_name: projectName });
       }
       setEditingName(false);
 
-      alert('Configuration saved successfully');
+      // Notify parent to refresh navigation tree
+      onProjectUpdated?.();
+
+      toast.success('Configuration saved successfully');
     } catch (error) {
       console.error('Failed to save configuration:', error);
-      alert('Failed to save configuration');
+      toast.error('Failed to save configuration');
     } finally {
       setSaving(false);
     }
@@ -124,27 +119,18 @@ export default function ProjectView({ projectId }: ProjectViewProps) {
     }
   };
 
-  const handleImportProperties = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const handleImportFile = async (file: File) => {
     try {
       const text = await file.text();
       const lines = text.split('\n');
       const newConfigData: Array<{ key: string; value: string }> = [];
 
       lines.forEach(line => {
-        // Skip empty lines and comments
         const trimmedLine = line.trim();
         if (!trimmedLine || trimmedLine.startsWith('#') || trimmedLine.startsWith('!')) {
           return;
         }
 
-        // Parse key=value
         const separatorIndex = trimmedLine.indexOf('=');
         if (separatorIndex > 0) {
           const key = trimmedLine.substring(0, separatorIndex).trim();
@@ -153,7 +139,6 @@ export default function ProjectView({ projectId }: ProjectViewProps) {
         }
       });
 
-      // Merge with existing config data
       const mergedConfig = [...configData];
       newConfigData.forEach(({ key, value }) => {
         const existingIndex = mergedConfig.findIndex(item => item.key === key);
@@ -165,15 +150,10 @@ export default function ProjectView({ projectId }: ProjectViewProps) {
       });
 
       setConfigData(mergedConfig);
-      alert(`Imported ${newConfigData.length} properties. Click Save to persist changes.`);
+      toast.success(`Imported ${newConfigData.length} properties. Click Save to persist changes.`);
     } catch (error) {
       console.error('Failed to import properties file:', error);
-      alert('Failed to import properties file');
-    }
-
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      toast.error('Failed to import properties file');
     }
   };
 
@@ -253,82 +233,13 @@ export default function ProjectView({ projectId }: ProjectViewProps) {
 
       {/* Configuration Editor */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Configuration</h3>
-          <div className="flex gap-2">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept=".properties,.txt"
-              className="hidden"
-            />
-            <button
-              onClick={handleImportProperties}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-            >
-              <Upload className="h-4 w-4" />
-              Import Properties
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-            >
-              <Save className="h-4 w-4" />
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="text-left py-2 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Key</th>
-                <th className="text-left py-2 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Value</th>
-                <th className="w-20"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {configData.map((item, index) => (
-                <tr key={index} className="border-b border-gray-100 dark:border-gray-700">
-                  <td className="py-2 px-4">
-                    <input
-                      type="text"
-                      value={item.key}
-                      onChange={(e) => handleConfigChange(index, 'key', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white"
-                    />
-                  </td>
-                  <td className="py-2 px-4">
-                    <input
-                      type="text"
-                      value={item.value}
-                      onChange={(e) => handleConfigChange(index, 'value', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white"
-                    />
-                  </td>
-                  <td className="py-2 px-4">
-                    <button
-                      onClick={() => removeConfigRow(index)}
-                      className="text-red-600 hover:text-red-700 dark:text-red-400"
-                    >
-                      Remove
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <button
-          onClick={addConfigRow}
-          className="mt-4 px-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
-        >
-          + Add Row
-        </button>
+        <ConfigEditor
+          configData={configData}
+          onConfigChange={setConfigData}
+          onSave={handleSave}
+          onImport={handleImportFile}
+          saving={saving}
+        />
       </div>
 
       {/* Current/Last Run Panel */}

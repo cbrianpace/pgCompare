@@ -13,6 +13,7 @@ model dc_project {
   project_config Json?
   dc_table       dc_table[]
   dc_result      dc_result[]
+  dc_job         dc_job[]
 }
 
 model dc_result {
@@ -114,4 +115,85 @@ model dc_target {
 
   @@ignore
   @@map("dc_target")
+}
+
+model dc_table_history {
+  tid            BigInt
+  batch_nbr      Int
+  start_dt       DateTime
+  end_dt         DateTime?
+  action_result  Json?
+  row_count      BigInt?
+
+  @@ignore
+  @@map("dc_table_history")
+}
+
+model dc_server {
+  server_id       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  server_name     String
+  server_host     String
+  server_pid      BigInt
+  status          String    @default("active") @db.VarChar(20)
+  registered_at   DateTime  @default(now())
+  last_heartbeat  DateTime  @default(now())
+  current_job_id  String?   @db.Uuid
+  server_config   Json?
+
+  @@index([status, last_heartbeat], name: "dc_server_idx1")
+}
+
+model dc_job {
+  job_id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pid                BigInt
+  job_type           String    @default("compare") @db.VarChar(20)
+  status             String    @default("pending") @db.VarChar(20)
+  priority           Int       @default(5)
+  batch_nbr          Int       @default(0)
+  table_filter       String?
+  target_server_id   String?   @db.Uuid
+  assigned_server_id String?   @db.Uuid
+  created_at         DateTime  @default(now())
+  scheduled_at       DateTime?
+  started_at         DateTime?
+  completed_at       DateTime?
+  created_by         String?
+  job_config         Json?
+  result_summary     Json?
+  error_message      String?
+  dc_project         dc_project @relation(fields: [pid], references: [pid], onDelete: Cascade)
+  dc_job_control     dc_job_control[]
+  dc_job_progress    dc_job_progress[]
+
+  @@index([status, priority(sort: Desc), created_at], name: "dc_job_idx1")
+  @@index([pid, status], name: "dc_job_idx2")
+}
+
+model dc_job_control {
+  control_id    Int       @id @default(autoincrement())
+  job_id        String    @db.Uuid
+  signal        String    @db.VarChar(20)
+  requested_at  DateTime  @default(now())
+  processed_at  DateTime?
+  requested_by  String?
+  dc_job        dc_job    @relation(fields: [job_id], references: [job_id], onDelete: Cascade)
+}
+
+model dc_job_progress {
+  job_id             String    @db.Uuid
+  tid                BigInt
+  table_name         String
+  status             String    @default("pending") @db.VarChar(20)
+  started_at         DateTime?
+  completed_at       DateTime?
+  source_cnt         BigInt?   @default(0)
+  target_cnt         BigInt?   @default(0)
+  equal_cnt          BigInt?   @default(0)
+  not_equal_cnt      BigInt?   @default(0)
+  missing_source_cnt BigInt?   @default(0)
+  missing_target_cnt BigInt?   @default(0)
+  error_message      String?
+  dc_job             dc_job    @relation(fields: [job_id], references: [job_id], onDelete: Cascade)
+
+  @@id([job_id, tid])
 }

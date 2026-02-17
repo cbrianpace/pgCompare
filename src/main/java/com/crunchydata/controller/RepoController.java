@@ -122,6 +122,21 @@ public class RepoController {
     }
 
     /**
+     * Saves the project settings to dc_project table.
+     *
+     * @param conn        Database connection
+     * @param pid         Project ID
+     * @param configJson  JSON string containing project configuration
+     */
+    public static void saveProjectConfig(Connection conn, Integer pid, String configJson) {
+        ArrayList<Object> binds = new ArrayList<>();
+        binds.add(configJson);
+        binds.add(pid);
+        SQLExecutionHelper.simpleUpdate(conn, "UPDATE dc_project SET project_config = ?::jsonb WHERE pid = ?", binds, true);
+        LoggingUtils.write("info", THREAD_NAME, String.format("Project config saved for project %d", pid));
+    }
+
+    /**
      * Loads findings from the staging table into the main table using the optimized StagingOperationsService.
      *
      * @param conn         Database connection

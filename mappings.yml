@@ -1,0 +1,2577 @@
+# pgCompare Table and Column Mapping Export
+# Generated: 2026-02-10T23:31:32.596626
+# Project: default (ID: 1)
+#
+# This file can be edited and re-imported using:
+#   java -jar pgcompare.jar import-mapping --file <this-file> [--overwrite]
+#
+# NOTES:
+# - 'alias' is the unique identifier that links source and target tables/columns
+# - Set 'enabled: false' to exclude a table or column from comparison
+# - 'mapExpression' allows custom SQL expressions for column value transformation
+# - 'primaryKey: true' marks columns used for row identification
+#
+# UNUSED FIELDS (reserved for future use):
+# - dc_table_map.mod_column: Not currently used
+# - dc_table_map.table_filter: Not currently used
+# - dc_table_column_map.map_type: Defaults to 'column', other values reserved
+#
+
+!!com.crunchydata.model.yaml.MappingExport
+exportDate: '2026-02-10T23:31:32.596626'
+projectId: 1
+projectName: default
+tables:
+  - alias: game
+    batchNumber: 1
+    columns:
+      - alias: attendance
+        enabled: true
+        source:
+          columnName: ATTENDANCE
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: attendance
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: away_errors
+        enabled: true
+        source:
+          columnName: AWAY_ERRORS
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: away_errors
+          dataClass: numeric
+          dataLength: 32
+          dataType: int4
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 32
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: away_hits
+        enabled: true
+        source:
+          columnName: AWAY_HITS
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: away_hits
+          dataClass: numeric
+          dataLength: 32
+          dataType: int4
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 32
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: away_score
+        enabled: true
+        source:
+          columnName: AWAY_SCORE
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: away_score
+          dataClass: numeric
+          dataLength: 16
+          dataType: int2
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 16
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: away_team_id
+        enabled: true
+        source:
+          columnName: AWAY_TEAM_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: away_team_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: delay_reason
+        enabled: true
+        source:
+          columnName: DELAY_REASON
+          dataClass: char
+          dataLength: 1000
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: delay_reason
+          dataClass: char
+          dataLength: 1000
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: game_date
+        enabled: true
+        source:
+          columnName: GAME_DATE
+          dataClass: char
+          dataLength: 0
+          dataType: TIMESTAMP_NTZ
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: game_date
+          dataClass: char
+          dataLength: 0
+          dataType: timestamp
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: game_id
+        enabled: true
+        source:
+          columnName: GAME_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+        target:
+          columnName: game_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: game_status
+        enabled: true
+        source:
+          columnName: GAME_STATUS
+          dataClass: char
+          dataLength: 40
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: game_status
+          dataClass: char
+          dataLength: 40
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: home_errors
+        enabled: true
+        source:
+          columnName: HOME_ERRORS
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: home_errors
+          dataClass: numeric
+          dataLength: 32
+          dataType: int4
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 32
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: home_hits
+        enabled: true
+        source:
+          columnName: HOME_HITS
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: home_hits
+          dataClass: numeric
+          dataLength: 32
+          dataType: int4
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 32
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: home_score
+        enabled: true
+        source:
+          columnName: HOME_SCORE
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: home_score
+          dataClass: numeric
+          dataLength: 16
+          dataType: int2
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 16
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: home_team_id
+        enabled: true
+        source:
+          columnName: HOME_TEAM_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: home_team_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: location
+        enabled: true
+        source:
+          columnName: LOCATION
+          dataClass: char
+          dataLength: 50
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: location
+          dataClass: char
+          dataLength: 50
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: original_date
+        enabled: true
+        source:
+          columnName: ORIGINAL_DATE
+          dataClass: char
+          dataLength: 0
+          dataType: TIMESTAMP_NTZ
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: original_date
+          dataClass: char
+          dataLength: 0
+          dataType: timestamp
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: processed
+        enabled: true
+        source:
+          columnName: PROCESSED
+          dataClass: char
+          dataLength: 1
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: processed
+          dataClass: char
+          dataLength: 1
+          dataType: bpchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: raw_data
+        enabled: true
+        source:
+          columnName: RAW_DATA
+          dataClass: char
+          dataLength: 4000
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: raw_data
+          dataClass: char
+          dataLength: 4000
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: schedule_status
+        enabled: true
+        source:
+          columnName: SCHEDULE_STATUS
+          dataClass: char
+          dataLength: 15
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: schedule_status
+          dataClass: char
+          dataLength: 15
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: season
+        enabled: true
+        source:
+          columnName: SEASON
+          dataClass: char
+          dataLength: 30
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: season
+          dataClass: char
+          dataLength: 30
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: venue_id
+        enabled: true
+        source:
+          columnName: VENUE_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: venue_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+    enabled: true
+    parallelDegree: 1
+    source:
+      modColumn: null
+      schema: MLB
+      schemaPreserveCase: false
+      table: GAME
+      tableFilter: null
+      tablePreserveCase: false
+    target:
+      modColumn: null
+      schema: mlb
+      schemaPreserveCase: false
+      table: game
+      tableFilter: null
+      tablePreserveCase: false
+  - alias: game_team
+    batchNumber: 1
+    columns:
+      - alias: game_id
+        enabled: true
+        source:
+          columnName: GAME_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+        target:
+          columnName: game_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: outcome
+        enabled: true
+        source:
+          columnName: OUTCOME
+          dataClass: char
+          dataLength: 1
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: outcome
+          dataClass: char
+          dataLength: 1
+          dataType: bpchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: score
+        enabled: true
+        source:
+          columnName: SCORE
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: score
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: team_id
+        enabled: true
+        source:
+          columnName: TEAM_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+        target:
+          columnName: team_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: team_role
+        enabled: true
+        source:
+          columnName: TEAM_ROLE
+          dataClass: char
+          dataLength: 5
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: team_role
+          dataClass: char
+          dataLength: 5
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+    enabled: true
+    parallelDegree: 1
+    source:
+      modColumn: null
+      schema: MLB
+      schemaPreserveCase: false
+      table: GAME_TEAM
+      tableFilter: null
+      tablePreserveCase: false
+    target:
+      modColumn: null
+      schema: mlb
+      schemaPreserveCase: false
+      table: game_team
+      tableFilter: null
+      tablePreserveCase: false
+  - alias: game_team_boxscore
+    batchNumber: 1
+    columns:
+      - alias: away_score
+        enabled: true
+        source:
+          columnName: AWAY_SCORE
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: away_score
+          dataClass: numeric
+          dataLength: 32
+          dataType: int4
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 32
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: game_id
+        enabled: true
+        source:
+          columnName: GAME_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: game_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: home_score
+        enabled: true
+        source:
+          columnName: HOME_SCORE
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: home_score
+          dataClass: numeric
+          dataLength: 32
+          dataType: int4
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 32
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: inning
+        enabled: true
+        source:
+          columnName: INNING
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: inning
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: score_change
+        enabled: true
+        source:
+          columnName: SCORE_CHANGE
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: score_change
+          dataClass: numeric
+          dataLength: 32
+          dataType: int4
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 32
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: scoring_play
+        enabled: true
+        source:
+          columnName: SCORING_PLAY
+          dataClass: char
+          dataLength: 16777216
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: scoring_play
+          dataClass: char
+          dataLength: 0
+          dataType: text
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+    enabled: true
+    parallelDegree: 1
+    source:
+      modColumn: null
+      schema: MLB
+      schemaPreserveCase: false
+      table: GAME_TEAM_BOXSCORE
+      tableFilter: null
+      tablePreserveCase: false
+    target:
+      modColumn: null
+      schema: mlb
+      schemaPreserveCase: false
+      table: game_team_boxscore
+      tableFilter: null
+      tablePreserveCase: false
+  - alias: game_team_stat
+    batchNumber: 1
+    columns:
+      - alias: game_id
+        enabled: true
+        source:
+          columnName: GAME_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: game_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: stat_category
+        enabled: true
+        source:
+          columnName: STAT_CATEGORY
+          dataClass: char
+          dataLength: 20
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: stat_category
+          dataClass: char
+          dataLength: 20
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: stat_name
+        enabled: true
+        source:
+          columnName: STAT_NAME
+          dataClass: char
+          dataLength: 50
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: stat_name
+          dataClass: char
+          dataLength: 50
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: stat_value
+        enabled: true
+        source:
+          columnName: STAT_VALUE
+          dataClass: numeric
+          dataLength: 24
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 24
+          numberScale: 6
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: stat_value
+          dataClass: numeric
+          dataLength: 0
+          dataType: numeric
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: team_id
+        enabled: true
+        source:
+          columnName: TEAM_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: team_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+    enabled: true
+    parallelDegree: 1
+    source:
+      modColumn: null
+      schema: MLB
+      schemaPreserveCase: false
+      table: GAME_TEAM_STAT
+      tableFilter: null
+      tablePreserveCase: false
+    target:
+      modColumn: null
+      schema: mlb
+      schemaPreserveCase: false
+      table: game_team_stat
+      tableFilter: null
+      tablePreserveCase: false
+  - alias: player
+    batchNumber: 1
+    columns:
+      - alias: bathand
+        enabled: true
+        source:
+          columnName: BATHAND
+          dataClass: char
+          dataLength: 1
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: bathand
+          dataClass: char
+          dataLength: 1
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: birth_city
+        enabled: true
+        source:
+          columnName: BIRTH_CITY
+          dataClass: char
+          dataLength: 100
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: birth_city
+          dataClass: char
+          dataLength: 100
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: birth_country
+        enabled: true
+        source:
+          columnName: BIRTH_COUNTRY
+          dataClass: char
+          dataLength: 100
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: birth_country
+          dataClass: char
+          dataLength: 100
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: birth_date
+        enabled: true
+        source:
+          columnName: BIRTH_DATE
+          dataClass: char
+          dataLength: 0
+          dataType: TIMESTAMP_NTZ
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: birth_date
+          dataClass: char
+          dataLength: 0
+          dataType: timestamp
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: first_name
+        enabled: true
+        source:
+          columnName: FIRST_NAME
+          dataClass: char
+          dataLength: 100
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: first_name
+          dataClass: char
+          dataLength: 100
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: height
+        enabled: true
+        source:
+          columnName: HEIGHT
+          dataClass: char
+          dataLength: 10
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: height
+          dataClass: char
+          dataLength: 10
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: image_src
+        enabled: true
+        source:
+          columnName: IMAGE_SRC
+          dataClass: char
+          dataLength: 400
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: image_src
+          dataClass: char
+          dataLength: 400
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: last_name
+        enabled: true
+        source:
+          columnName: LAST_NAME
+          dataClass: char
+          dataLength: 100
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: last_name
+          dataClass: char
+          dataLength: 100
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: player_id
+        enabled: true
+        source:
+          columnName: PLAYER_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: player_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: player_nbr
+        enabled: true
+        source:
+          columnName: PLAYER_NBR
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: player_nbr
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: player_position
+        enabled: true
+        source:
+          columnName: PLAYER_POSITION
+          dataClass: char
+          dataLength: 3
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: player_position
+          dataClass: char
+          dataLength: 3
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: rookie
+        enabled: true
+        source:
+          columnName: ROOKIE
+          dataClass: boolean
+          dataLength: 0
+          dataType: BOOLEAN
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: rookie
+          dataClass: boolean
+          dataLength: 0
+          dataType: bool
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: roster_status
+        enabled: true
+        source:
+          columnName: ROSTER_STATUS
+          dataClass: char
+          dataLength: 16777216
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: roster_status
+          dataClass: char
+          dataLength: 0
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: throwhand
+        enabled: true
+        source:
+          columnName: THROWHAND
+          dataClass: char
+          dataLength: 1
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: throwhand
+          dataClass: char
+          dataLength: 1
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: weight
+        enabled: true
+        source:
+          columnName: WEIGHT
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: weight
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+    enabled: true
+    parallelDegree: 1
+    source:
+      modColumn: null
+      schema: MLB
+      schemaPreserveCase: false
+      table: PLAYER
+      tableFilter: null
+      tablePreserveCase: false
+    target:
+      modColumn: null
+      schema: mlb
+      schemaPreserveCase: false
+      table: player
+      tableFilter: null
+      tablePreserveCase: false
+  - alias: player_game_stat
+    batchNumber: 1
+    columns:
+      - alias: game_id
+        enabled: true
+        source:
+          columnName: GAME_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: game_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: player_id
+        enabled: true
+        source:
+          columnName: PLAYER_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: player_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: stat_category
+        enabled: true
+        source:
+          columnName: STAT_CATEGORY
+          dataClass: char
+          dataLength: 100
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: stat_category
+          dataClass: char
+          dataLength: 100
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: stat_name
+        enabled: true
+        source:
+          columnName: STAT_NAME
+          dataClass: char
+          dataLength: 100
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: stat_name
+          dataClass: char
+          dataLength: 100
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: stat_value
+        enabled: true
+        source:
+          columnName: STAT_VALUE
+          dataClass: numeric
+          dataLength: 24
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 24
+          numberScale: 6
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: stat_value
+          dataClass: numeric
+          dataLength: 0
+          dataType: numeric
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: team_id
+        enabled: true
+        source:
+          columnName: TEAM_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: team_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+    enabled: true
+    parallelDegree: 1
+    source:
+      modColumn: null
+      schema: MLB
+      schemaPreserveCase: false
+      table: PLAYER_GAME_STAT
+      tableFilter: null
+      tablePreserveCase: false
+    target:
+      modColumn: null
+      schema: mlb
+      schemaPreserveCase: false
+      table: player_game_stat
+      tableFilter: null
+      tablePreserveCase: false
+  - alias: player_stat
+    batchNumber: 1
+    columns:
+      - alias: player_id
+        enabled: true
+        source:
+          columnName: PLAYER_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: player_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: stat_category
+        enabled: true
+        source:
+          columnName: STAT_CATEGORY
+          dataClass: char
+          dataLength: 100
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: stat_category
+          dataClass: char
+          dataLength: 100
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: stat_name
+        enabled: true
+        source:
+          columnName: STAT_NAME
+          dataClass: char
+          dataLength: 100
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: stat_name
+          dataClass: char
+          dataLength: 100
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: stat_value
+        enabled: true
+        source:
+          columnName: STAT_VALUE
+          dataClass: numeric
+          dataLength: 24
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 24
+          numberScale: 6
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: stat_value
+          dataClass: numeric
+          dataLength: 0
+          dataType: numeric
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+    enabled: true
+    parallelDegree: 1
+    source:
+      modColumn: null
+      schema: MLB
+      schemaPreserveCase: false
+      table: PLAYER_STAT
+      tableFilter: null
+      tablePreserveCase: false
+    target:
+      modColumn: null
+      schema: mlb
+      schemaPreserveCase: false
+      table: player_stat
+      tableFilter: null
+      tablePreserveCase: false
+  - alias: player_team
+    batchNumber: 1
+    columns:
+      - alias: player_id
+        enabled: true
+        source:
+          columnName: PLAYER_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: player_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: season
+        enabled: true
+        source:
+          columnName: SEASON
+          dataClass: char
+          dataLength: 30
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: season
+          dataClass: char
+          dataLength: 30
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: team_id
+        enabled: true
+        source:
+          columnName: TEAM_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: team_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+    enabled: true
+    parallelDegree: 1
+    source:
+      modColumn: null
+      schema: MLB
+      schemaPreserveCase: false
+      table: PLAYER_TEAM
+      tableFilter: null
+      tablePreserveCase: false
+    target:
+      modColumn: null
+      schema: mlb
+      schemaPreserveCase: false
+      table: player_team
+      tableFilter: null
+      tablePreserveCase: false
+  - alias: season
+    batchNumber: 1
+    columns:
+      - alias: season
+        enabled: true
+        source:
+          columnName: SEASON
+          dataClass: char
+          dataLength: 40
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: season
+          dataClass: char
+          dataLength: 40
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: season_id
+        enabled: true
+        source:
+          columnName: SEASON_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: season_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: status
+        enabled: true
+        source:
+          columnName: STATUS
+          dataClass: char
+          dataLength: 10
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: status
+          dataClass: char
+          dataLength: 10
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+    enabled: true
+    parallelDegree: 1
+    source:
+      modColumn: null
+      schema: MLB
+      schemaPreserveCase: false
+      table: SEASON
+      tableFilter: null
+      tablePreserveCase: false
+    target:
+      modColumn: null
+      schema: mlb
+      schemaPreserveCase: false
+      table: season
+      tableFilter: null
+      tablePreserveCase: false
+  - alias: team
+    batchNumber: 1
+    columns:
+      - alias: abbreviation
+        enabled: true
+        source:
+          columnName: ABBREVIATION
+          dataClass: char
+          dataLength: 3
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: abbreviation
+          dataClass: char
+          dataLength: 3
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: city
+        enabled: true
+        source:
+          columnName: CITY
+          dataClass: char
+          dataLength: 100
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: city
+          dataClass: char
+          dataLength: 100
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: logo_src
+        enabled: true
+        source:
+          columnName: LOGO_SRC
+          dataClass: char
+          dataLength: 200
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: logo_src
+          dataClass: char
+          dataLength: 200
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: team_id
+        enabled: true
+        source:
+          columnName: TEAM_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: team_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: team_name
+        enabled: true
+        source:
+          columnName: TEAM_NAME
+          dataClass: char
+          dataLength: 50
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: team_name
+          dataClass: char
+          dataLength: 50
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: venue_id
+        enabled: true
+        source:
+          columnName: VENUE_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: venue_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+    enabled: true
+    parallelDegree: 1
+    source:
+      modColumn: null
+      schema: MLB
+      schemaPreserveCase: false
+      table: TEAM
+      tableFilter: null
+      tablePreserveCase: false
+    target:
+      modColumn: null
+      schema: mlb
+      schemaPreserveCase: false
+      table: team
+      tableFilter: null
+      tablePreserveCase: false
+  - alias: team_stat
+    batchNumber: 1
+    columns:
+      - alias: stat_category
+        enabled: true
+        source:
+          columnName: STAT_CATEGORY
+          dataClass: char
+          dataLength: 100
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: stat_category
+          dataClass: char
+          dataLength: 100
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: stat_name
+        enabled: true
+        source:
+          columnName: STAT_NAME
+          dataClass: char
+          dataLength: 100
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: stat_name
+          dataClass: char
+          dataLength: 100
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: stat_value
+        enabled: true
+        source:
+          columnName: STAT_VALUE
+          dataClass: numeric
+          dataLength: 24
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 24
+          numberScale: 6
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: stat_value
+          dataClass: numeric
+          dataLength: 0
+          dataType: numeric
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: team_id
+        enabled: true
+        source:
+          columnName: TEAM_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: team_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+    enabled: true
+    parallelDegree: 1
+    source:
+      modColumn: null
+      schema: MLB
+      schemaPreserveCase: false
+      table: TEAM_STAT
+      tableFilter: null
+      tablePreserveCase: false
+    target:
+      modColumn: null
+      schema: mlb
+      schemaPreserveCase: false
+      table: team_stat
+      tableFilter: null
+      tablePreserveCase: false
+  - alias: venue
+    batchNumber: 1
+    columns:
+      - alias: city
+        enabled: true
+        source:
+          columnName: CITY
+          dataClass: char
+          dataLength: 16777216
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: city
+          dataClass: char
+          dataLength: 0
+          dataType: text
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: country
+        enabled: true
+        source:
+          columnName: COUNTRY
+          dataClass: char
+          dataLength: 16777216
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: country
+          dataClass: char
+          dataLength: 0
+          dataType: text
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: geo_coordinates
+        enabled: true
+        source:
+          columnName: GEO_COORDINATES
+          dataClass: char
+          dataLength: 200
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: geo_coordinates
+          dataClass: char
+          dataLength: 200
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: raw_data
+        enabled: true
+        source:
+          columnName: RAW_DATA
+          dataClass: char
+          dataLength: 4000
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: raw_data
+          dataClass: char
+          dataLength: 4000
+          dataType: varchar
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+      - alias: venue_id
+        enabled: true
+        source:
+          columnName: VENUE_ID
+          dataClass: numeric
+          dataLength: 38
+          dataType: NUMBER
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 38
+          numberScale: 0
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: venue_id
+          dataClass: numeric
+          dataLength: 64
+          dataType: int8
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 64
+          numberScale: 0
+          preserveCase: false
+          primaryKey: true
+          supported: true
+      - alias: venue_name
+        enabled: true
+        source:
+          columnName: VENUE_NAME
+          dataClass: char
+          dataLength: 16777216
+          dataType: TEXT
+          mapExpression: null
+          mapType: column
+          nullable: true
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+        target:
+          columnName: venue_name
+          dataClass: char
+          dataLength: 0
+          dataType: text
+          mapExpression: null
+          mapType: column
+          nullable: false
+          numberPrecision: 44
+          numberScale: 22
+          preserveCase: false
+          primaryKey: false
+          supported: true
+    enabled: true
+    parallelDegree: 1
+    source:
+      modColumn: null
+      schema: MLB
+      schemaPreserveCase: false
+      table: VENUE
+      tableFilter: null
+      tablePreserveCase: false
+    target:
+      modColumn: null
+      schema: mlb
+      schemaPreserveCase: false
+      table: venue
+      tableFilter: null
+      tablePreserveCase: false
+version: '1.0'

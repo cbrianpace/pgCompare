@@ -76,3 +76,78 @@ export interface Result {
   compare_end?: Date;
 }
 
+export interface Server {
+  server_id: string;
+  server_name: string;
+  server_host: string;
+  server_pid: number;
+  status: 'active' | 'idle' | 'busy' | 'offline' | 'terminated';
+  registered_at: Date;
+  last_heartbeat: Date;
+  current_job_id?: string;
+  server_config?: Record<string, any>;
+  seconds_since_heartbeat?: number;
+}
+
+export interface Job {
+  job_id: string;
+  pid: number;
+  project_name?: string;
+  job_type: 'compare' | 'check' | 'discover';
+  status: 'pending' | 'scheduled' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled';
+  priority: number;
+  batch_nbr: number;
+  table_filter?: string;
+  target_server_id?: string;
+  assigned_server_id?: string;
+  assigned_server_name?: string;
+  created_at: Date;
+  scheduled_at?: Date;
+  started_at?: Date;
+  completed_at?: Date;
+  created_by?: string;
+  job_config?: Record<string, any>;
+  result_summary?: {
+    totalTables?: number;
+    completedTables?: number;
+    failedTables?: number;
+    totalSource?: number;
+    totalEqual?: number;
+    totalNotEqual?: number;
+    totalMissing?: number;
+  };
+  error_message?: string;
+  duration_seconds?: number;
+}
+
+export interface JobProgress {
+  job_id: string;
+  tid: number;
+  table_name: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+  started_at?: Date;
+  completed_at?: Date;
+  source_cnt?: number;
+  target_cnt?: number;
+  equal_cnt?: number;
+  not_equal_cnt?: number;
+  missing_source_cnt?: number;
+  missing_target_cnt?: number;
+  error_message?: string;
+  duration_seconds?: number;
+}
+
+export interface JobProgressSummary {
+  total_tables: number;
+  completed_tables: number;
+  running_tables: number;
+  pending_tables: number;
+  failed_tables: number;
+  total_source: number;
+  total_target: number;
+  total_equal: number;
+  total_not_equal: number;
+  total_missing_source: number;
+  total_missing_target: number;
+}
+
