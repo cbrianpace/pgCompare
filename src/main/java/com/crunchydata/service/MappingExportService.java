@@ -108,6 +108,7 @@ public class MappingExportService {
             }
         };
         representer.getPropertyUtils().setSkipMissingProperties(true);
+        representer.addClassTag(MappingExport.class, Tag.MAP);
 
         Yaml yaml = new Yaml(representer, options);
 

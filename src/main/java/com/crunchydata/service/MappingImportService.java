@@ -20,6 +20,7 @@ import com.crunchydata.core.database.SQLExecutionHelper;
 import com.crunchydata.model.yaml.*;
 import com.crunchydata.util.LoggingUtils;
 import org.yaml.snakeyaml.LoaderOptions;
+import org.yaml.snakeyaml.TypeDescription;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
@@ -74,7 +75,10 @@ public class MappingImportService {
                 inputFile, pid, overwrite));
 
         LoaderOptions loaderOptions = new LoaderOptions();
-        Yaml yaml = new Yaml(new Constructor(MappingExport.class, loaderOptions));
+        loaderOptions.setTagInspector(tag -> tag.getClassName().startsWith("com.crunchydata.model.yaml."));
+        Constructor constructor = new Constructor(MappingExport.class, loaderOptions);
+        constructor.addTypeDescription(new TypeDescription(MappingExport.class, "tag:yaml.org,2002:com.crunchydata.model.yaml.MappingExport"));
+        Yaml yaml = new Yaml(constructor);
 
         MappingExport mappingExport;
         try (FileInputStream fis = new FileInputStream(inputFile)) {

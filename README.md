@@ -51,6 +51,8 @@ Before initiating the build and installation process, ensure the following prere
 
 # Getting Started
 
+> **Note:** The `main` branch contains active development and may be unstable. For production use, we recommend checking out a stable release tag (e.g., `git checkout v0.6.0`). See [Releases](https://github.com/CrunchyData/pgCompare/releases) for available versions.
+
 ## 1. Fork the repository
 
 ## 2. Clone and Build
@@ -58,6 +60,7 @@ Before initiating the build and installation process, ensure the following prere
 ```shell
 git clone --depth 1 git@github.com:<your-github-username>/pgCompare.git
 cd pgCompare
+git checkout v0.6.0  # Optional: checkout a stable release
 mvn clean install
 ```
 
