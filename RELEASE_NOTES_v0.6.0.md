@@ -57,6 +57,15 @@ java -jar pgcompare.jar server --name my-server-01
 - Loading skeletons for better perceived performance
 - Keyboard shortcuts support
 
+### Signal Handling & Graceful Shutdown
+pgCompare now properly handles OS signals for clean shutdown and query cancellation:
+
+- **SIGINT (Ctrl+C)**: Graceful shutdown - completes the current table comparison before exiting
+- **SIGTERM**: Immediate termination - cancels all running database queries and exits
+- **SIGHUP**: Reload configuration from properties file without restart
+
+Active database statements are tracked and can be cancelled on demand, preventing orphaned queries on the source/target databases during forced shutdowns.
+
 ## Database Schema Changes
 
 **Note:** Drop and recreate the repository to upgrade to 0.6.0.
