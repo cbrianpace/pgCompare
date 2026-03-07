@@ -78,8 +78,12 @@ export default function JobsView({ initialFilter = 'all', onBack, onJobSelect }:
     }
   };
 
-  const handleDeleteSingle = async (jobId: string) => {
-    if (!confirm('Are you sure you want to delete this job?')) return;
+  const handleDeleteSingle = async (jobId: string, isRunning: boolean = false) => {
+    const message = isRunning 
+      ? 'This job is still running. Are you sure you want to delete it? This cannot be undone.'
+      : 'Are you sure you want to delete this job?';
+    
+    if (!confirm(message)) return;
     
     const success = await deleteJob(jobId);
     if (success) {
@@ -93,7 +97,10 @@ export default function JobsView({ initialFilter = 'all', onBack, onJobSelect }:
   const handleDeleteSelected = async () => {
     const deletableJobs = Array.from(selectedJobs).filter(jobId => {
       const job = jobs.find(j => j.job_id === jobId);
-      return job && ['completed', 'error', 'failed', 'cancelled'].includes(job.status);
+      if (!job) return false;
+      // Allow deletion of completed/error/failed/cancelled jobs, or running standalone jobs
+      return ['completed', 'error', 'failed', 'cancelled'].includes(job.status) ||
+             (job.status === 'running' && job.source === 'standalone');
     });
 
     if (deletableJobs.length === 0) {
@@ -101,7 +108,16 @@ export default function JobsView({ initialFilter = 'all', onBack, onJobSelect }:
       return;
     }
 
-    if (!confirm(`Are you sure you want to delete ${deletableJobs.length} job(s)?`)) return;
+    const runningCount = deletableJobs.filter(jobId => {
+      const job = jobs.find(j => j.job_id === jobId);
+      return job?.status === 'running';
+    }).length;
+
+    const message = runningCount > 0
+      ? `Are you sure you want to delete ${deletableJobs.length} job(s)? ${runningCount} job(s) are still running.`
+      : `Are you sure you want to delete ${deletableJobs.length} job(s)?`;
+
+    if (!confirm(message)) return;
 
     let successCount = 0;
     let failCount = 0;
@@ -304,7 +320,7 @@ export default function JobsView({ initialFilter = 'all', onBack, onJobSelect }:
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
-                      {job.status === 'running' && (
+                      {job.status === 'running' && job.source !== 'standalone' && (
                         <>
                           <button
                             onClick={() => sendControl(job.job_id, 'pause')}
@@ -321,6 +337,15 @@ export default function JobsView({ initialFilter = 'all', onBack, onJobSelect }:
                             <StopCircle className="h-4 w-4 text-orange-600" />
                           </button>
                         </>
+                      )}
+                      {job.status === 'running' && job.source === 'standalone' && (
+                        <button
+                          onClick={() => handleDeleteSingle(job.job_id, true)}
+                          className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
+                          title="Delete running standalone job"
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </button>
                       )}
                       {job.status === 'paused' && (
                         <button

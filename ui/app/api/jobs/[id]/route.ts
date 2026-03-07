@@ -125,7 +125,7 @@ export async function DELETE(
     await prisma.$executeRawUnsafe(`
       DELETE FROM ${schema}.dc_job 
       WHERE job_id = '${jobId}'::uuid 
-        AND status IN ('pending', 'completed', 'failed', 'cancelled')
+        AND status IN ('pending', 'running', 'completed', 'error', 'failed', 'cancelled')
     `);
 
     return NextResponse.json({ success: true });
