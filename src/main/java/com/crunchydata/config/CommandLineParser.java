@@ -148,6 +148,7 @@ public class CommandLineParser {
         System.out.println("   import-mapping  Import table/column mappings from YAML file");
         System.out.println("   init            Initialize the repository database");
         System.out.println("   server          Run in server mode (daemon that polls work queue)");
+        System.out.println("   test-connection Test database connections and report status");
         System.out.println("Options:");
         System.out.println("   -b|--batch <batch nbr>");
         System.out.println("   -n|--name <server name>  Server name for server mode (default: pgcompare-server)");

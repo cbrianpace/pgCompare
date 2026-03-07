@@ -24,9 +24,6 @@ ARG JAVA_OPT="-XX:UseSVE=0"
 #############################################
 FROM docker.io/library/maven:${MAVEN_VERSION} AS java-builder
 LABEL stage=pgcomparebuilder
-ARG JAVA_OPT
-
-ENV _JAVA_OPTIONS=${JAVA_OPT}
 
 WORKDIR /app
 COPY pom.xml ./
@@ -49,20 +46,25 @@ RUN npm run build
 #############################################
 # Stage 3: Multi-stage Production Image
 #############################################
-FROM ${BASE_REGISTRY}/${BASE_IMAGE} as multi-stage
+FROM ${BASE_REGISTRY}/${BASE_IMAGE} AS multi-stage
 ARG JAVA_OPT
 ARG NODE_VERSION
+ARG TARGETARCH
 
-RUN microdnf install java-21-openjdk nodejs -y && microdnf clean all
+RUN microdnf install java-21-openjdk tar xz -y && microdnf clean all
+
+RUN NODE_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "x64") && \
+    curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}.9.0/node-v${NODE_VERSION}.9.0-linux-${NODE_ARCH}.tar.xz | tar -xJ -C /usr/local --strip-components=1
 
 USER 0
 
-RUN mkdir -p /opt/pgcompare/ui \
+RUN mkdir -p /opt/pgcompare/ui /opt/pgcompare/lib \
     && chown -R 1001:1001 /opt/pgcompare
 
-COPY --from=java-builder /app/docker/start.sh /opt/pgcompare/
-COPY --from=java-builder /app/docker/pgcompare.properties /etc/pgcompare/
+COPY docker/start.sh /opt/pgcompare/
+COPY docker/pgcompare.properties /etc/pgcompare/
 COPY --from=java-builder /app/target/*.jar /opt/pgcompare/
+COPY --from=java-builder /app/target/lib/ /opt/pgcompare/lib/
 
 COPY --from=ui-builder /app/ui/.next/standalone/ /opt/pgcompare/ui/
 COPY --from=ui-builder /app/ui/.next/static /opt/pgcompare/ui/.next/static
@@ -90,19 +92,25 @@ WORKDIR "/opt/pgcompare"
 #############################################
 # Stage 4: Local Platform Build
 #############################################
-FROM ${BASE_REGISTRY}/${BASE_IMAGE} as local
+FROM ${BASE_REGISTRY}/${BASE_IMAGE} AS local
 ARG JAVA_OPT
+ARG NODE_VERSION
+ARG TARGETARCH
 
-RUN microdnf install java-21-openjdk nodejs -y && microdnf clean all
+RUN microdnf install java-21-openjdk tar xz -y && microdnf clean all
+
+RUN NODE_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "x64") && \
+    curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}.9.0/node-v${NODE_VERSION}.9.0-linux-${NODE_ARCH}.tar.xz | tar -xJ -C /usr/local --strip-components=1
 
 USER 0
 
-RUN mkdir -p /opt/pgcompare/ui \
+RUN mkdir -p /opt/pgcompare/ui /opt/pgcompare/lib \
     && chown -R 1001:1001 /opt/pgcompare
 
 COPY docker/start.sh /opt/pgcompare/
 COPY docker/pgcompare.properties /etc/pgcompare/
 COPY target/*.jar /opt/pgcompare/
+COPY target/lib/ /opt/pgcompare/lib/
 
 COPY ui/.next/standalone/ /opt/pgcompare/ui/
 COPY ui/.next/static /opt/pgcompare/ui/.next/static

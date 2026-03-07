@@ -7,9 +7,10 @@ import { formatDistanceToNow } from 'date-fns';
 
 interface DashboardProps {
   onJobSelect?: (jobId: string) => void;
+  onFilterJobs?: (filter: 'running' | 'pending' | 'all') => void;
 }
 
-export default function Dashboard({ onJobSelect }: DashboardProps) {
+export default function Dashboard({ onJobSelect, onFilterJobs }: DashboardProps) {
   const [servers, setServers] = useState<ServerType[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +31,9 @@ export default function Dashboard({ onJobSelect }: DashboardProps) {
       const serversData = await serversRes.json();
       const jobsData = await jobsRes.json();
       
+      console.log('Servers API response:', serversRes.status, serversData);
+      console.log('Jobs API response:', jobsRes.status, jobsData);
+      
       setServers(Array.isArray(serversData) ? serversData : []);
       setJobs(Array.isArray(jobsData) ? jobsData : []);
     } catch (error) {
@@ -47,6 +51,8 @@ export default function Dashboard({ onJobSelect }: DashboardProps) {
         return <PauseCircle className="h-4 w-4 text-yellow-500" />;
       case 'completed':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'error':
+        return <AlertTriangle className="h-4 w-4 text-orange-500" />;
       case 'failed':
         return <XCircle className="h-4 w-4 text-red-500" />;
       case 'cancelled':
@@ -54,6 +60,13 @@ export default function Dashboard({ onJobSelect }: DashboardProps) {
       default:
         return <Clock className="h-4 w-4 text-gray-400" />;
     }
+  };
+
+  const formatDuration = (seconds: number | null | undefined): string => {
+    if (seconds === null || seconds === undefined || isNaN(Number(seconds))) {
+      return '-';
+    }
+    return `${Math.round(Number(seconds))}s`;
   };
 
   const getServerStatusColor = (status: string) => {
@@ -74,8 +87,8 @@ export default function Dashboard({ onJobSelect }: DashboardProps) {
   const runningJobs = jobs.filter(j => j.status === 'running' || j.status === 'paused');
   const pendingJobs = jobs.filter(j => j.status === 'pending' || j.status === 'scheduled');
   const activeServers = servers.filter(s => 
-    s.status !== 'terminated' && 
-    (s.seconds_since_heartbeat === undefined || s.seconds_since_heartbeat < 120)
+    s.status !== 'terminated' && s.status !== 'offline' &&
+    (s.seconds_since_heartbeat === undefined || s.seconds_since_heartbeat === null || s.seconds_since_heartbeat < 300)
   );
 
   if (loading) {
@@ -98,7 +111,10 @@ export default function Dashboard({ onJobSelect }: DashboardProps) {
           </div>
         </div>
         
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+        <div 
+          onClick={() => onFilterJobs?.('running')}
+          className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
+        >
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
               <PlayCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -110,7 +126,10 @@ export default function Dashboard({ onJobSelect }: DashboardProps) {
           </div>
         </div>
         
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+        <div 
+          onClick={() => onFilterJobs?.('pending')}
+          className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer hover:ring-2 hover:ring-yellow-500 transition-all"
+        >
           <div className="flex items-center gap-3">
             <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
               <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
@@ -122,7 +141,10 @@ export default function Dashboard({ onJobSelect }: DashboardProps) {
           </div>
         </div>
         
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+        <div 
+          onClick={() => onFilterJobs?.('all')}
+          className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer hover:ring-2 hover:ring-purple-500 transition-all"
+        >
           <div className="flex items-center gap-3">
             <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
               <Activity className="h-5 w-5 text-purple-600 dark:text-purple-400" />
@@ -172,9 +194,11 @@ export default function Dashboard({ onJobSelect }: DashboardProps) {
                     <span className={`px-2 py-1 rounded text-xs ${getServerStatusColor(server.status)}`}>
                       {server.status}
                     </span>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Last seen {formatDistanceToNow(new Date(server.last_heartbeat), { addSuffix: true })}
-                    </p>
+                    {server.last_heartbeat && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Last seen {formatDistanceToNow(new Date(server.last_heartbeat), { addSuffix: true })}
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -211,7 +235,7 @@ export default function Dashboard({ onJobSelect }: DashboardProps) {
                       </span>
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {job.assigned_server_name || 'Unassigned'}
+                      {job.source === 'standalone' ? 'standalone' : (job.assigned_server_name || 'Unassigned')}
                     </div>
                   </div>
                   {job.started_at && (
@@ -262,13 +286,13 @@ export default function Dashboard({ onJobSelect }: DashboardProps) {
                   <td className="px-4 py-2 font-medium">{job.project_name || `Project ${job.pid}`}</td>
                   <td className="px-4 py-2 capitalize">{job.job_type}</td>
                   <td className="px-4 py-2 text-gray-600 dark:text-gray-400">
-                    {job.assigned_server_name || '-'}
+                    {job.source === 'standalone' ? 'standalone' : (job.assigned_server_name || '-')}
                   </td>
                   <td className="px-4 py-2 text-gray-600 dark:text-gray-400">
                     {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
                   </td>
                   <td className="px-4 py-2 text-right text-gray-600 dark:text-gray-400">
-                    {job.duration_seconds ? `${Math.round(job.duration_seconds)}s` : '-'}
+                    {formatDuration(job.duration_seconds)}
                   </td>
                 </tr>
               ))}

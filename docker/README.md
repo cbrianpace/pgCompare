@@ -6,7 +6,7 @@ For building instructions, see the comments in the `Dockerfile`.
 
 ### Multi-stage Build (recommended)
 ```shell
-docker build --target multi-stage -t pgcompare:latest .
+docker buildx build --load --platform linux/amd64,linux/arm64 --target multi-stage -t pgcompare:latest -t pgcompare:v0.6.0 .
 ```
 
 ### Local Build (requires pre-built artifacts)
@@ -26,9 +26,11 @@ The container supports multiple operational modes controlled by the `PGCOMPARE_M
 | Mode | Description |
 |------|-------------|
 | `standard` | (Default) Runs the Java application with `PGCOMPARE_OPTIONS` |
-| `server` | Runs the Java application in server mode for distributed processing |
-| `ui` | Runs only the Next.js web UI |
-| `all` | Runs both the Java server and the Next.js UI |
+| `server` | **[PREVIEW]** Runs the Java application in server mode for distributed processing |
+| `ui` | **[PREVIEW]** Runs only the Next.js web UI |
+| `all` | **[PREVIEW]** Runs both the Java server and the Next.js UI |
+
+> **Note:** The `server`, `ui`, and `all` modes are currently in preview and may change in future releases.
 
 ## Environment Variables
 

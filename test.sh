@@ -22,14 +22,14 @@ export PGCOMPARE_CONFIG=~/app/gitecto/work/pgCompare-Test/pgcompare.${TEST_PLATF
 
 echo "  Discovery:"
 export PGCOMPARE_LOG_DESTINATION=${OUTPUT_BASE}/${TEST_PLATFORM}-full-a-discover.log
-java -jar pgcompare.jar discover --report ${OUTPUT_BASE}/${TEST_PLATFORM}-full-a-discover.html 2>&1 | grep -v "INFO" | awk '{ print "      " $0 }'
+java -jar pgcompare.jar discover -p 9 --report ${OUTPUT_BASE}/${TEST_PLATFORM}-full-a-discover.html 2>&1 | grep -v "INFO" | awk '{ print "      " $0 }'
 
 echo "  Compare:"
 export PGCOMPARE_LOG_DESTINATION=${OUTPUT_BASE}/${TEST_PLATFORM}-full-b-compare.log
-java -jar pgcompare.jar compare --report ${OUTPUT_BASE}/${TEST_PLATFORM}-full-b-compare.html 2>&1 | grep -v "INFO" | awk '{ print "      " $0 }'
+java -jar pgcompare.jar compare -p 9 --report ${OUTPUT_BASE}/${TEST_PLATFORM}-full-b-compare.html 2>&1 | grep -v "INFO" | awk '{ print "      " $0 }'
 
 echo "  Check:"
 export PGCOMPARE_LOG_DESTINATION=${OUTPUT_BASE}/${TEST_PLATFORM}-full-c-check.log
-java -jar pgcompare.jar check --fix --report ${OUTPUT_BASE}/${TEST_PLATFORM}-full-c-check.html 2>&1 | grep -v "INFO" | awk '{ print "      " $0 }'
+java -jar pgcompare.jar check -p 9 --fix --report ${OUTPUT_BASE}/${TEST_PLATFORM}-full-c-check.html 2>&1 | grep -v "INFO" | awk '{ print "      " $0 }'
 
 cd -

@@ -64,6 +64,21 @@ export function getPrisma(): PrismaClient {
     return initializePrisma(creds);
   }
   
+  // Fallback to DATABASE_URL environment variable
+  if (process.env.DATABASE_URL && process.env.DATABASE_URL !== 'postgresql://dummy:dummy@localhost:5432/dummy') {
+    console.log('Initializing Prisma from DATABASE_URL');
+    const url = new URL(process.env.DATABASE_URL);
+    const schema = url.searchParams.get('schema') || 'pgcompare';
+    currentSchema = schema;
+    global.dbSchema = schema;
+    
+    prisma = new PrismaClient({
+      log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+    });
+    global.prisma = prisma;
+    return prisma;
+  }
+  
   throw new Error('Database not initialized. Please login again.');
 }
 

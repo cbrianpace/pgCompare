@@ -22,9 +22,11 @@ import java.sql.Connection;
 import static com.crunchydata.service.DatabaseConnectionService.getConnection;
 import static com.crunchydata.config.Settings.*;
 
+import com.crunchydata.service.ConnectionTestService;
 import com.crunchydata.service.RepositoryInitializationService;
 import com.crunchydata.service.ServerModeService;
 import com.crunchydata.service.SignalHandlerService;
+import com.crunchydata.service.StandaloneJobService;
 import com.crunchydata.util.LoggingUtils;
 import com.crunchydata.util.ValidationUtils;
 
@@ -49,6 +51,7 @@ public class ApplicationContext {
     private static final String ACTION_IMPORT_CONFIG = "import-config";
     private static final String ACTION_IMPORT_MAPPING = "import-mapping";
     private static final String ACTION_SERVER = "server";
+    private static final String ACTION_TEST_CONNECTION = "test-connection";
     private static final String CONN_TYPE_POSTGRES = "postgres";
     private static final String CONN_TYPE_REPO = "repo";
     private static final String CONN_TYPE_SOURCE = "source";
@@ -117,8 +120,8 @@ public class ApplicationContext {
         // Connect to repository database
         connectToRepository();
         
-        // Load project configuration (skip for init and server actions)
-        if (!action.equals(ACTION_INIT) && !action.equals(ACTION_SERVER)) {
+        // Load project configuration (skip for init, server, and test-connection actions)
+        if (!action.equals(ACTION_INIT) && !action.equals(ACTION_SERVER) && !action.equals(ACTION_TEST_CONNECTION)) {
             setProjectConfig(connRepo, pid);
         }
 
@@ -141,8 +144,8 @@ public class ApplicationContext {
      * 
      */
     public void executeAction() {
-        // Connect to source and target databases (skip for init, server, and config/mapping actions)
-        if (!action.equals(ACTION_INIT) && !action.equals(ACTION_SERVER) && !action.equals(ACTION_EXPORT_MAPPING) && !action.equals(ACTION_IMPORT_MAPPING) 
+        // Connect to source and target databases (skip for init, server, test-connection, and config/mapping actions)
+        if (!action.equals(ACTION_INIT) && !action.equals(ACTION_SERVER) && !action.equals(ACTION_TEST_CONNECTION) && !action.equals(ACTION_EXPORT_MAPPING) && !action.equals(ACTION_IMPORT_MAPPING) 
                 && !action.equals(ACTION_EXPORT_CONFIG) && !action.equals(ACTION_IMPORT_CONFIG)) {
             connectToSourceAndTarget();
         }
@@ -153,6 +156,8 @@ public class ApplicationContext {
                 performDiscovery();
                 break;
             case "check":
+                performCheck();
+                break;
             case "compare":
                 performCompare();
                 break;
@@ -173,6 +178,9 @@ public class ApplicationContext {
                 break;
             case "server":
                 performServerMode();
+                break;
+            case "test-connection":
+                performTestConnection();
                 break;
             default:
                 throw new IllegalArgumentException("Invalid action specified: " + action);
@@ -240,18 +248,69 @@ public class ApplicationContext {
         LoggingUtils.write("info", THREAD_NAME, "Performing table discovery");
         String table = (cmd.hasOption("table")) ? cmd.getOptionValue("table").toLowerCase() : "";
 
-        // Discover Tables
-        com.crunchydata.controller.DiscoverController.performTableDiscovery(Props, pid, table, connRepo, connSource, connTarget);
+        StandaloneJobService jobService = null;
+        if (StandaloneJobService.isJobTrackingAvailable(connRepo) && StandaloneJobService.ensureProjectExists(connRepo, pid)) {
+            jobService = new StandaloneJobService(connRepo);
+            jobService.startJob(pid, "discover", batchParameter, table, startStopWatch);
+        }
 
-        // Discover Columns
-        com.crunchydata.controller.DiscoverController.performColumnDiscovery(Props, pid, table, connRepo, connSource, connTarget);
+        try {
+            // Discover Tables
+            com.crunchydata.controller.DiscoverController.performTableDiscovery(Props, pid, table, connRepo, connSource, connTarget);
+
+            // Discover Columns
+            com.crunchydata.controller.DiscoverController.performColumnDiscovery(Props, pid, table, connRepo, connSource, connTarget);
+
+            if (jobService != null) {
+                jobService.completeJob(null);
+            }
+        } catch (Exception e) {
+            if (jobService != null) {
+                jobService.failJob(e.getMessage());
+            }
+            throw e;
+        }
     }
     
     /**
      * Perform comparison operation.
      */
     private void performCompare() {
-        com.crunchydata.controller.CompareController.performCompare(this);
+        performCompareWithJobTracking(false);
+    }
+
+    /**
+     * Perform check (recheck) operation.
+     */
+    private void performCheck() {
+        performCompareWithJobTracking(true);
+    }
+
+    /**
+     * Perform comparison or check operation with job tracking.
+     */
+    private void performCompareWithJobTracking(boolean isCheck) {
+        String table = (cmd.hasOption("table")) ? cmd.getOptionValue("table").toLowerCase() : "";
+        String jobType = isCheck ? "check" : "compare";
+
+        StandaloneJobService jobService = null;
+        if (StandaloneJobService.isJobTrackingAvailable(connRepo) && StandaloneJobService.ensureProjectExists(connRepo, pid)) {
+            jobService = new StandaloneJobService(connRepo);
+            jobService.startJob(pid, jobType, batchParameter, table, startStopWatch);
+        }
+
+        try {
+            com.crunchydata.controller.CompareController.performCompare(this);
+
+            if (jobService != null) {
+                jobService.completeJob(null);
+            }
+        } catch (Exception e) {
+            if (jobService != null) {
+                jobService.failJob(e.getMessage());
+            }
+            throw e;
+        }
     }
     
     /**
@@ -318,6 +377,28 @@ public class ApplicationContext {
             return dotIndex > 0 ? hostname.substring(0, dotIndex) : hostname;
         } catch (Exception e) {
             return "pgcompare-server";
+        }
+    }
+
+    private void performTestConnection() {
+        LoggingUtils.write("info", THREAD_NAME, "Testing database connections");
+        
+        // Load project configuration for the specified project
+        setProjectConfig(connRepo, pid);
+        
+        // Test all connections
+        var results = ConnectionTestService.testAllConnections();
+        
+        // Print results as JSON for easier parsing
+        ConnectionTestService.printResultsAsJson(results);
+        
+        // Also print human-readable format
+        ConnectionTestService.printResults(results);
+        
+        // Exit with appropriate code
+        boolean allSuccess = results.values().stream().allMatch(r -> r.success);
+        if (!allSuccess) {
+            System.exit(1);
         }
     }
 }

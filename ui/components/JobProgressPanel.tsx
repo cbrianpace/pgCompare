@@ -68,7 +68,10 @@ export default function JobProgressPanel({ jobId, onClose }: JobProgressPanelPro
       case 'running':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
       case 'completed':
+      case 'in-sync':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'out-of-sync':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
       case 'failed':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
       case 'pending':
@@ -78,6 +81,14 @@ export default function JobProgressPanel({ jobId, onClose }: JobProgressPanelPro
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
     }
+  };
+
+  const getDisplayStatus = (table: JobProgress) => {
+    if (table.status === 'completed') {
+      const hasOutOfSync = (table.not_equal_cnt || 0) + (table.missing_source_cnt || 0) + (table.missing_target_cnt || 0) > 0;
+      return hasOutOfSync ? 'out-of-sync' : 'in-sync';
+    }
+    return table.status;
   };
 
   if (loading) {
@@ -210,13 +221,15 @@ export default function JobProgressPanel({ jobId, onClose }: JobProgressPanelPro
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {progress.map((table) => (
+              {progress.map((table) => {
+                const displayStatus = getDisplayStatus(table);
+                return (
                 <tr key={table.tid} className={table.status === 'running' ? 'bg-blue-50 dark:bg-blue-900/10' : ''}>
                   <td className="px-4 py-2 font-medium">{table.table_name}</td>
                   <td className="px-4 py-2">
-                    <span className={`px-2 py-1 rounded text-xs ${getStatusColor(table.status)}`}>
+                    <span className={`px-2 py-1 rounded text-xs ${getStatusColor(displayStatus)}`}>
                       {table.status === 'running' && <RefreshCw className="inline h-3 w-3 mr-1 animate-spin" />}
-                      {table.status}
+                      {displayStatus}
                     </span>
                   </td>
                   <td className="px-4 py-2 text-right text-green-600 dark:text-green-400">
@@ -236,7 +249,8 @@ export default function JobProgressPanel({ jobId, onClose }: JobProgressPanelPro
                     {table.duration_seconds ? `${Math.round(table.duration_seconds)}s` : '-'}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

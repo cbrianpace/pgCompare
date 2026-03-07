@@ -83,6 +83,16 @@ public class JobAwareCompareController {
         }
 
         try {
+            // Pre-populate progress for all tables before processing
+            LoggingUtils.write("info", THREAD_NAME, "Pre-populating job progress for all tables");
+            while (tablesResultSet.next()) {
+                long tid = tablesResultSet.getLong("tid");
+                String tableAlias = tablesResultSet.getString("table_alias");
+                serverService.initializeJobProgress(jobId, tid, tableAlias);
+            }
+            // Reset cursor to beginning
+            tablesResultSet.beforeFirst();
+            
             RepoController repoController = new RepoController();
             long rid = System.currentTimeMillis();
             int tablesProcessed = 0;
@@ -140,10 +150,8 @@ public class JobAwareCompareController {
                     tablesResultSet.getBoolean("enabled")
                 );
 
-                // Initialize progress for this table
-                serverService.initializeJobProgress(jobId, dct.getTid(), dct.getTableAlias());
-                serverService.updateJobProgress(jobId, dct.getTid(), dct.getTableAlias(), 
-                    "running", null, null, null, null, null, null, null);
+                // Mark this table as running
+                serverService.updateJobProgress(jobId, dct.getTid(), "running", null, null);
 
                 LoggingUtils.write("info", THREAD_NAME, 
                     String.format("Processing table: %s (tid=%d)", dct.getTableAlias(), dct.getTid()));
@@ -153,21 +161,25 @@ public class JobAwareCompareController {
                     DataComparisonTableMap dctmSource = TableController.getTableMap(connRepo, dct.getTid(), "source");
                     DataComparisonTableMap dctmTarget = TableController.getTableMap(connRepo, dct.getTid(), "target");
 
+                    // Set additional properties (consistent with standalone mode)
+                    dctmSource.setBatchNbr(dct.getBatchNbr());
+                    dctmSource.setPid(dct.getPid());
+                    dctmSource.setTableAlias(dct.getTableAlias());
+                    
+                    dctmTarget.setBatchNbr(dct.getBatchNbr());
+                    dctmTarget.setPid(dct.getPid());
+                    dctmTarget.setTableAlias(dct.getTableAlias());
+
                     // Perform reconciliation
                     JSONObject result = reconcileDataWithProgress(
                         jobId, connRepo, connSource, connTarget, rid, isCheck, 
                         dct, dctmSource, dctmTarget, serverService);
 
-                    // Update progress with results
-                    serverService.updateJobProgress(jobId, dct.getTid(), dct.getTableAlias(),
+                    // Update progress with status and cid (counts come from dc_result)
+                    serverService.updateJobProgress(jobId, dct.getTid(),
                         "completed".equals(result.optString("status")) ? "completed" : "failed",
-                        (long) result.optInt("sourceCount", 0),
-                        (long) result.optInt("targetCount", 0),
-                        (long) result.optInt("equal", 0),
-                        (long) result.optInt("notEqual", 0),
-                        (long) result.optInt("missingSource", 0),
-                        (long) result.optInt("missingTarget", 0),
-                        result.optString("error", null));
+                        result.optString("error", null),
+                        result.has("cid") ? result.getInt("cid") : null);
 
                     tablesProcessed++;
 
@@ -175,8 +187,8 @@ public class JobAwareCompareController {
                     LoggingUtils.write("severe", THREAD_NAME, 
                         String.format("Error processing table %s: %s", dct.getTableAlias(), e.getMessage()));
                     
-                    serverService.updateJobProgress(jobId, dct.getTid(), dct.getTableAlias(),
-                        "failed", null, null, null, null, null, null, e.getMessage());
+                    serverService.updateJobProgress(jobId, dct.getTid(),
+                        "failed", e.getMessage(), null);
                 }
             }
 
@@ -202,8 +214,26 @@ public class JobAwareCompareController {
         JSONObject result = new JSONObject();
         result.put("tableName", dct.getTableAlias());
         result.put("status", "processing");
+        result.put("compareStatus", "processing");
+        result.put("missingSource", 0);
+        result.put("missingTarget", 0);
+        result.put("notEqual", 0);
+        result.put("equal", 0);
 
+        RepoController repoController = new RepoController();
+        
         try {
+            // Start table history tracking
+            repoController.startTableHistory(connRepo, (int) dct.getTid(), dct.getBatchNbr());
+            
+            // Clear previous compare results for this table (unless it's a recheck)
+            if (!check) {
+                LoggingUtils.write("info", THREAD_NAME, 
+                    String.format("Clearing previous compare data for table %s (tid=%d, batch=%d)", 
+                        dct.getTableAlias(), dct.getTid(), dct.getBatchNbr()));
+                repoController.deleteDataCompare(connRepo, (int) dct.getTid(), dct.getBatchNbr());
+            }
+            
             // Get column mapping
             ArrayList<Object> binds = new ArrayList<>();
             binds.add(dct.getTid());
@@ -226,7 +256,7 @@ public class JobAwareCompareController {
             ColumnMetadata ciTarget = getColumnInfo(columnMap, "target", 
                 Props.getProperty("target-type"),
                 dctmTarget.getSchemaName(), dctmTarget.getTableName(),
-                !check && "database".equals(Props.getProperty("column-hash-method")));
+                "database".equals(Props.getProperty("column-hash-method")));
 
             // Create compare ID
             Integer cid = createCompareId(connRepo, dctmTarget, rid);
@@ -257,6 +287,10 @@ public class JobAwareCompareController {
             long elapsedTime = (System.currentTimeMillis() - startTime) / 1000;
             result.put("elapsedTime", elapsedTime);
             result.put("status", "completed");
+            result.put("cid", cid);
+
+            // Complete table history (consistent with standalone mode)
+            RepoController.completeTableHistory(connRepo, (int) dct.getTid(), dct.getBatchNbr(), 0, result.toString());
 
         } catch (Exception e) {
             LoggingUtils.write("severe", THREAD_NAME, 

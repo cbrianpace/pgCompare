@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPrisma } from '@/lib/db';
+import { getPrisma, getSchema } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
     const prisma = getPrisma();
-    const servers = await prisma.$queryRaw`
+    const schema = getSchema();
+    
+    const servers = await prisma.$queryRawUnsafe(`
       SELECT 
         server_id,
         server_name,
@@ -16,7 +18,7 @@ export async function GET(request: NextRequest) {
         current_job_id,
         server_config,
         EXTRACT(EPOCH FROM (current_timestamp - last_heartbeat))::float as seconds_since_heartbeat
-      FROM dc_server
+      FROM ${schema}.dc_server
       WHERE status != 'terminated'
       ORDER BY 
         CASE status 
@@ -26,11 +28,11 @@ export async function GET(request: NextRequest) {
           WHEN 'offline' THEN 4
         END,
         last_heartbeat DESC
-    `;
+    `);
     
     return NextResponse.json(servers);
   } catch (error) {
     console.error('Failed to fetch servers:', error);
-    return NextResponse.json({ error: 'Failed to fetch servers' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch servers', details: String(error) }, { status: 500 });
   }
 }

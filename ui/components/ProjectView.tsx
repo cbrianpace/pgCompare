@@ -239,6 +239,7 @@ export default function ProjectView({ projectId, onProjectUpdated }: ProjectView
           onSave={handleSave}
           onImport={handleImportFile}
           saving={saving}
+          projectId={projectId}
         />
       </div>
 

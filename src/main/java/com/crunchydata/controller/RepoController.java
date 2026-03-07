@@ -93,13 +93,14 @@ public class RepoController {
         try {
             ArrayList<Object> binds = new ArrayList<>();
             binds.add(tid);
-            binds.add(batchNbr);
 
-            SQLExecutionHelper.simpleUpdate(conn, "DELETE FROM dc_source WHERE tid=? AND batch_nbr=?", binds, true);
-            SQLExecutionHelper.simpleUpdate(conn, "DELETE FROM dc_target WHERE tid=? AND batch_nbr=?", binds, true);
+            // Delete all rows for this tid (not filtered by batch_nbr) to ensure clean slate
+            // The MARK queries in ResultProcessor use tid only, so we must purge all data for tid
+            SQLExecutionHelper.simpleUpdate(conn, "DELETE FROM dc_source WHERE tid=?", binds, true);
+            SQLExecutionHelper.simpleUpdate(conn, "DELETE FROM dc_target WHERE tid=?", binds, true);
 
             LoggingUtils.write("info", THREAD_NAME,
-                    String.format("Data comparison results deleted for table %d, batch %d", tid, batchNbr));
+                    String.format("Data comparison results deleted for table %d", tid));
 
         } catch (Exception e) {
             LoggingUtils.write("severe", THREAD_NAME,

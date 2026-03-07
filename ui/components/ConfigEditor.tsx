@@ -1,8 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, Download, Upload, ChevronDown, ChevronRight, Info } from 'lucide-react';
-import { CONFIG_PROPERTIES, CATEGORY_LABELS, PropertyDefinition, getPropertyDefinition, isDefaultValue } from '@/lib/configProperties';
+import { Save, Plus, Trash2, Download, Upload, ChevronDown, ChevronRight, Info, Plug, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { CONFIG_PROPERTIES, CATEGORY_LABELS, PropertyDefinition, getPropertyDefinition, isDefaultValue, getFriendlyLabel } from '@/lib/configProperties';
+
+interface ConnectionTestResult {
+  success: boolean;
+  connectionType: string;
+  databaseType: string;
+  host: string;
+  port: number;
+  database: string;
+  schema: string;
+  user: string;
+  databaseProductName?: string;
+  databaseProductVersion?: string;
+  errorMessage?: string;
+  errorDetail?: string;
+  responseTimeMs: number;
+}
 
 interface ConfigEditorProps {
   configData: Array<{ key: string; value: string }>;
@@ -10,6 +26,7 @@ interface ConfigEditorProps {
   onSave: () => void;
   onImport: (file: File) => void;
   saving: boolean;
+  projectId?: number;
 }
 
 export default function ConfigEditor({ 
@@ -17,7 +34,8 @@ export default function ConfigEditor({
   onConfigChange, 
   onSave, 
   onImport,
-  saving 
+  saving,
+  projectId
 }: ConfigEditorProps) {
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
     system: true,
@@ -27,12 +45,22 @@ export default function ConfigEditor({
   });
   const [showAddProperty, setShowAddProperty] = useState(false);
   const [newPropertyKey, setNewPropertyKey] = useState('');
+  const [testingConnections, setTestingConnections] = useState(false);
+  const [connectionResults, setConnectionResults] = useState<Record<string, ConnectionTestResult | null>>({});
+  const [showTestResults, setShowTestResults] = useState(false);
+  const [testError, setTestError] = useState<string | null>(null);
+  const [serverUsed, setServerUsed] = useState<{ name: string } | null>(null);
 
   const handleConfigChange = (key: string, value: string) => {
-    const newConfig = configData.map(item => 
-      item.key === key ? { ...item, value } : item
-    );
-    onConfigChange(newConfig);
+    const existingIndex = configData.findIndex(item => item.key === key);
+    if (existingIndex >= 0) {
+      const newConfig = configData.map(item => 
+        item.key === key ? { ...item, value } : item
+      );
+      onConfigChange(newConfig);
+    } else {
+      onConfigChange([...configData, { key, value }]);
+    }
   };
 
   const handleRemoveProperty = (key: string) => {
@@ -53,6 +81,54 @@ export default function ConfigEditor({
     onConfigChange([...configData, { key: newPropertyKey, value: defaultValue }]);
     setNewPropertyKey('');
     setShowAddProperty(false);
+  };
+
+  const handleTestConnections = async () => {
+    if (!projectId) return;
+    
+    setTestingConnections(true);
+    setShowTestResults(true);
+    setConnectionResults({});
+    setTestError(null);
+    setServerUsed(null);
+    
+    try {
+      const response = await fetch(`/api/projects/${projectId}/test-connection`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectionTypes: ['repository', 'source', 'target'] }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.serverUsed) {
+        setServerUsed(data.serverUsed);
+      }
+      
+      if (data.error && !data.results) {
+        setTestError(data.error);
+      } else if (data.results) {
+        setConnectionResults(data.results);
+      }
+    } catch (error: any) {
+      console.error('Failed to test connections:', error);
+      setConnectionResults({
+        error: {
+          success: false,
+          connectionType: 'error',
+          databaseType: '',
+          host: '',
+          port: 0,
+          database: '',
+          schema: '',
+          user: '',
+          errorMessage: error.message || 'Failed to test connections',
+          responseTimeMs: 0,
+        }
+      });
+    } finally {
+      setTestingConnections(false);
+    }
   };
 
   const handleExport = () => {
@@ -105,21 +181,50 @@ export default function ConfigEditor({
   };
 
   const getCategoryProperties = (category: string) => {
-    return configData.filter(item => {
+    const existingKeys = new Set(configData.map(item => item.key));
+    
+    const essentialKeys: Record<string, string[]> = {
+      repository: ['repo-host', 'repo-port', 'repo-dbname', 'repo-schema', 'repo-user', 'repo-password', 'repo-sslmode'],
+      source: ['source-type', 'source-host', 'source-port', 'source-dbname', 'source-schema', 'source-user', 'source-password', 'source-sslmode', 'source-name', 'source-warehouse'],
+      target: ['target-type', 'target-host', 'target-port', 'target-dbname', 'target-schema', 'target-user', 'target-password', 'target-sslmode', 'target-name', 'target-warehouse'],
+      system: []
+    };
+    
+    const result: Array<{ key: string; value: string }> = [];
+    
+    const essential = essentialKeys[category] || [];
+    essential.forEach(key => {
+      const existing = configData.find(item => item.key === key);
+      if (existing) {
+        result.push(existing);
+      } else {
+        const propDef = getPropertyDefinition(key);
+        result.push({ key, value: propDef?.defaultValue || '' });
+      }
+    });
+    
+    configData.forEach(item => {
+      if (result.some(r => r.key === item.key)) return;
+      
       const propDef = getPropertyDefinition(item.key);
       if (propDef) {
-        return propDef.category === category;
+        if (propDef.category === category) result.push(item);
+      } else {
+        if (category === 'source' && item.key.startsWith('source-')) result.push(item);
+        else if (category === 'target' && item.key.startsWith('target-')) result.push(item);
+        else if (category === 'repository' && item.key.startsWith('repo-')) result.push(item);
+        else if (category === 'system' && !item.key.startsWith('source-') && !item.key.startsWith('target-') && !item.key.startsWith('repo-')) result.push(item);
       }
-      if (category === 'source') return item.key.startsWith('source-');
-      if (category === 'target') return item.key.startsWith('target-');
-      if (category === 'repository') return item.key.startsWith('repo-');
-      return category === 'system';
     });
+    
+    return result;
   };
 
   const getAvailableProperties = () => {
     const existingKeys = new Set(configData.map(item => item.key));
-    return CONFIG_PROPERTIES.filter(prop => !existingKeys.has(prop.key));
+    return CONFIG_PROPERTIES
+      .filter(prop => !existingKeys.has(prop.key))
+      .sort((a, b) => a.key.localeCompare(b.key));
   };
 
   const renderPropertyInput = (key: string, value: string) => {
@@ -149,6 +254,19 @@ export default function ConfigEditor({
           <option value="true">true</option>
           <option value="false">false</option>
         </select>
+      );
+    }
+    
+    if (propDef?.type === 'password') {
+      return (
+        <input
+          type="password"
+          value={value}
+          onChange={(e) => handleConfigChange(key, e.target.value)}
+          placeholder="Enter password"
+          autoComplete="new-password"
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500"
+        />
       );
     }
     
@@ -189,6 +307,20 @@ export default function ConfigEditor({
             <Download className="h-4 w-4" />
             Export
           </button>
+          {projectId && (
+            <button
+              onClick={handleTestConnections}
+              disabled={testingConnections}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
+            >
+              {testingConnections ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plug className="h-4 w-4" />
+              )}
+              {testingConnections ? 'Testing...' : 'Test Connections'}
+            </button>
+          )}
           <button
             onClick={onSave}
             disabled={saving}
@@ -199,6 +331,110 @@ export default function ConfigEditor({
           </button>
         </div>
       </div>
+
+      {/* Connection Test Results */}
+      {showTestResults && (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                <Plug className="h-4 w-4" />
+                Connection Test Results
+              </h4>
+              {serverUsed && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Tested via server: {serverUsed.name}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => setShowTestResults(false)}
+              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+            >
+              <XCircle className="h-5 w-5" />
+            </button>
+          </div>
+          
+          {testingConnections ? (
+            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Testing connections via pgCompare server...
+            </div>
+          ) : testError ? (
+            <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
+                <XCircle className="h-5 w-5" />
+                <span className="font-medium">Connection Test Failed</span>
+              </div>
+              <p className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">{testError}</p>
+            </div>
+          ) : Object.keys(connectionResults).length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400">No results yet</p>
+          ) : (
+            <div className="space-y-3">
+              {Object.entries(connectionResults).map(([key, result]) => {
+                if (!result) return null;
+                return (
+                  <div
+                    key={key}
+                    className={`p-3 rounded-lg border ${
+                      result.success
+                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                        : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      {result.success ? (
+                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      ) : (
+                        <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                      )}
+                      <span className="font-medium text-gray-900 dark:text-white capitalize">
+                        {key}
+                      </span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        ({result.databaseType})
+                      </span>
+                      <span className="text-xs text-gray-400 ml-auto">
+                        {result.responseTimeMs}ms
+                      </span>
+                    </div>
+                    
+                    <div className="text-sm space-y-1 ml-7">
+                      <p className="text-gray-600 dark:text-gray-300">
+                        <span className="text-gray-500 dark:text-gray-400">Host:</span> {result.host}:{result.port}
+                      </p>
+                      <p className="text-gray-600 dark:text-gray-300">
+                        <span className="text-gray-500 dark:text-gray-400">Database:</span> {result.database}
+                        {result.schema && <span className="text-gray-400"> / {result.schema}</span>}
+                      </p>
+                      <p className="text-gray-600 dark:text-gray-300">
+                        <span className="text-gray-500 dark:text-gray-400">User:</span> {result.user}
+                      </p>
+                      
+                      {result.success && result.databaseProductName && (
+                        <p className="text-green-600 dark:text-green-400">
+                          <span className="text-gray-500 dark:text-gray-400">Server:</span> {result.databaseProductName} {result.databaseProductVersion}
+                        </p>
+                      )}
+                      
+                      {!result.success && result.errorMessage && (
+                        <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/30 rounded text-red-700 dark:text-red-300">
+                          <p className="font-medium">Error:</p>
+                          <p className="text-sm">{result.errorMessage}</p>
+                          {result.errorDetail && (
+                            <p className="text-xs mt-1 text-red-600 dark:text-red-400">{result.errorDetail}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Category Sections */}
       {['system', 'repository', 'source', 'target'].map(category => {
@@ -233,19 +469,23 @@ export default function ConfigEditor({
                   categoryProps.map(({ key, value }) => {
                     const propDef = getPropertyDefinition(key);
                     const isDefault = isDefaultValue(key, value);
+                    const label = getFriendlyLabel(key);
                     
                     return (
                       <div key={key} className="flex items-start gap-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <label className="font-medium text-sm text-gray-900 dark:text-white">
-                              {key}
+                              {label}
                             </label>
                             {isDefault && (
                               <span className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-600 rounded">
                                 default
                               </span>
                             )}
+                            <span className="text-xs text-gray-400" title={key}>
+                              ({key})
+                            </span>
                           </div>
                           {propDef?.description && (
                             <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
@@ -283,7 +523,7 @@ export default function ConfigEditor({
               <option value="">Select a property...</option>
               {getAvailableProperties().map(prop => (
                 <option key={prop.key} value={prop.key}>
-                  {prop.key} - {prop.description}
+                  {prop.label} - {prop.description}
                 </option>
               ))}
             </select>

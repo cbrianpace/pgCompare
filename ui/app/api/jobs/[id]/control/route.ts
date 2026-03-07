@@ -1,5 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPrisma } from '@/lib/db';
+import { getPrisma, getSchema } from '@/lib/db';
+
+function serializeBigInt(obj: unknown): unknown {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'bigint') return Number(obj);
+  if (obj instanceof Date) return obj.toISOString();
+  // Handle Prisma Decimal type (has toNumber method)
+  if (typeof obj === 'object' && obj !== null && 'toNumber' in obj && typeof (obj as any).toNumber === 'function') {
+    return (obj as any).toNumber();
+  }
+  if (Array.isArray(obj)) return obj.map(serializeBigInt);
+  if (typeof obj === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = serializeBigInt(value);
+    }
+    return result;
+  }
+  return obj;
+}
 
 export async function POST(
   request: NextRequest,
@@ -9,6 +28,7 @@ export async function POST(
 
   try {
     const prisma = getPrisma();
+    const schema = getSchema();
     const body = await request.json();
     const { signal, requested_by = 'ui' } = body;
 
@@ -20,9 +40,9 @@ export async function POST(
       );
     }
 
-    const job = await prisma.$queryRaw`
-      SELECT status FROM dc_job WHERE job_id = ${jobId}::uuid
-    `;
+    const job = await prisma.$queryRawUnsafe(`
+      SELECT status FROM ${schema}.dc_job WHERE job_id = '${jobId}'::uuid
+    `);
 
     if (!job || (Array.isArray(job) && job.length === 0)) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
@@ -37,27 +57,27 @@ export async function POST(
       );
     }
 
-    const result = await prisma.$queryRaw`
-      INSERT INTO dc_job_control (job_id, signal, requested_by)
-      VALUES (${jobId}::uuid, ${signal}, ${requested_by})
+    const result = await prisma.$queryRawUnsafe(`
+      INSERT INTO ${schema}.dc_job_control (job_id, signal, requested_by)
+      VALUES ('${jobId}'::uuid, '${signal}', '${requested_by}')
       RETURNING control_id, requested_at
-    `;
+    `);
 
     if (signal === 'pause') {
-      await prisma.$executeRaw`
-        UPDATE dc_job SET status = 'paused' WHERE job_id = ${jobId}::uuid
-      `;
+      await prisma.$executeRawUnsafe(`
+        UPDATE ${schema}.dc_job SET status = 'paused' WHERE job_id = '${jobId}'::uuid
+      `);
     } else if (signal === 'resume') {
-      await prisma.$executeRaw`
-        UPDATE dc_job SET status = 'running' WHERE job_id = ${jobId}::uuid
-      `;
+      await prisma.$executeRawUnsafe(`
+        UPDATE ${schema}.dc_job SET status = 'running' WHERE job_id = '${jobId}'::uuid
+      `);
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json(serializeBigInt({ 
       success: true, 
       signal,
       control: Array.isArray(result) ? result[0] : result 
-    });
+    }));
   } catch (error) {
     console.error('Failed to send control signal:', error);
     return NextResponse.json({ error: 'Failed to send control signal' }, { status: 500 });
@@ -72,15 +92,17 @@ export async function GET(
 
   try {
     const prisma = getPrisma();
-    const signals = await prisma.$queryRaw`
+    const schema = getSchema();
+    
+    const signals = await prisma.$queryRawUnsafe(`
       SELECT control_id, signal, requested_at, processed_at, requested_by
-      FROM dc_job_control
-      WHERE job_id = ${jobId}::uuid
+      FROM ${schema}.dc_job_control
+      WHERE job_id = '${jobId}'::uuid
       ORDER BY requested_at DESC
       LIMIT 20
-    `;
+    `);
 
-    return NextResponse.json(signals);
+    return NextResponse.json(serializeBigInt(signals));
   } catch (error) {
     console.error('Failed to fetch control signals:', error);
     return NextResponse.json({ error: 'Failed to fetch control signals' }, { status: 500 });

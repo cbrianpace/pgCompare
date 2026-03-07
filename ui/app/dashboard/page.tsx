@@ -6,12 +6,14 @@ import NavigationTree from '@/components/NavigationTree';
 import ProjectView from '@/components/ProjectView';
 import TableView from '@/components/TableView';
 import Dashboard from '@/components/Dashboard';
+import JobsView from '@/components/JobsView';
+import JobDetailView from '@/components/JobDetailView';
 import ThemeToggle from '@/components/ThemeToggle';
 import ScheduleJobModal from '@/components/ScheduleJobModal';
 import JobProgressPanel from '@/components/JobProgressPanel';
 import { LogOut, LayoutDashboard, Play, Plus } from 'lucide-react';
 
-type ViewMode = 'dashboard' | 'projects';
+type ViewMode = 'dashboard' | 'projects' | 'jobs' | 'job-detail';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -20,6 +22,7 @@ export default function DashboardPage() {
   const [selectedTableId, setSelectedTableId] = useState<number | undefined>();
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [jobsFilter, setJobsFilter] = useState<'running' | 'pending' | 'all'>('all');
   const [navRefreshTrigger, setNavRefreshTrigger] = useState(0);
 
   const handleProjectUpdated = () => {
@@ -48,6 +51,20 @@ export default function DashboardPage() {
 
   const handleJobSelect = (jobId: string) => {
     setSelectedJobId(jobId);
+    setViewMode('job-detail');
+  };
+
+  const handleFilterJobs = (filter: 'running' | 'pending' | 'all') => {
+    setJobsFilter(filter);
+    setViewMode('jobs');
+  };
+
+  const handleBackFromJobs = () => {
+    setViewMode('dashboard');
+  };
+
+  const handleBackFromJobDetail = () => {
+    setViewMode('jobs');
   };
 
   return (
@@ -122,7 +139,15 @@ export default function DashboardPage() {
         {/* Content Area */}
         <main className="flex-1 overflow-y-auto p-6">
           {viewMode === 'dashboard' ? (
-            <Dashboard onJobSelect={handleJobSelect} />
+            <Dashboard onJobSelect={handleJobSelect} onFilterJobs={handleFilterJobs} />
+          ) : viewMode === 'jobs' ? (
+            <JobsView 
+              initialFilter={jobsFilter} 
+              onBack={handleBackFromJobs} 
+              onJobSelect={handleJobSelect} 
+            />
+          ) : viewMode === 'job-detail' && selectedJobId ? (
+            <JobDetailView jobId={selectedJobId} onBack={handleBackFromJobDetail} />
           ) : selectedTableId ? (
             <TableView tableId={selectedTableId} />
           ) : selectedProjectId ? (
@@ -143,13 +168,6 @@ export default function DashboardPage() {
         onClose={() => setShowScheduleModal(false)}
         preselectedProject={selectedProjectId}
       />
-
-      {selectedJobId && (
-        <JobProgressPanel
-          jobId={selectedJobId}
-          onClose={() => setSelectedJobId(null)}
-        />
-      )}
     </div>
   );
 }

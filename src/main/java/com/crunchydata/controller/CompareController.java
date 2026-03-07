@@ -125,7 +125,7 @@ public class CompareController {
 
             ColumnMetadata ciTarget = getColumnInfo(columnMap, "target", Props.getProperty("target-type"),
                     dctmTarget.getSchemaName(), dctmTarget.getTableName(),
-                    !check && "database".equals(Props.getProperty("column-hash-method")));
+                    "database".equals(Props.getProperty("column-hash-method")));
 
             logColumnMetadata(ciSource, ciTarget);
 

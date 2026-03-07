@@ -333,7 +333,7 @@ public interface RepoSQLConstants {
     String SQL_REPO_DCRESULT_UPDATE_STATUSANDCOUNT = """
                                  UPDATE dc_result SET missing_source_cnt=?, missing_target_cnt=?, not_equal_cnt=?, status=?, compare_end=current_timestamp
                                  WHERE cid=?
-                                 RETURNING equal_cnt, missing_source_cnt, missing_target_cnt, not_equal_cnt, status
+                                 RETURNING equal_cnt, missing_source_cnt, missing_target_cnt, not_equal_cnt, status, source_cnt, target_cnt
                                  """;
 
     String SQL_REPO_DCRESULT_CLEAN = """

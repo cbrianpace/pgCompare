@@ -118,6 +118,7 @@ export interface Job {
   };
   error_message?: string;
   duration_seconds?: number;
+  source?: 'server' | 'standalone' | 'api';
 }
 
 export interface JobProgress {

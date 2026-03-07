@@ -144,7 +144,8 @@ public class RepositoryInitializationService {
             REPO_DDL_DC_SERVER,
             REPO_DDL_DC_JOB,
             REPO_DDL_DC_JOB_CONTROL,
-            REPO_DDL_DC_JOB_PROGRESS
+            REPO_DDL_DC_JOB_PROGRESS,
+            REPO_DDL_DC_JOB_LOG
         );
         
         LoggingUtils.write("info", THREAD_NAME, "Creating repository tables");
@@ -171,7 +172,9 @@ public class RepositoryInitializationService {
             REPO_DDL_DC_JOB_IDX2,
             REPO_DDL_DC_JOB_FK1,
             REPO_DDL_DC_JOB_CONTROL_FK1,
-            REPO_DDL_DC_JOB_PROGRESS_FK1
+            REPO_DDL_DC_JOB_PROGRESS_FK1,
+            REPO_DDL_DC_JOB_LOG_IDX1,
+            REPO_DDL_DC_JOB_LOG_FK1
         );
         
         LoggingUtils.write("info", THREAD_NAME, "Creating indexes and constraints");
