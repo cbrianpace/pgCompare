@@ -206,6 +206,7 @@ java -jar pgcompare.jar compare
 | `column-hash-method` | database | Hash computation location: `database` or `hybrid` |
 | `database-sort` | true | Sort rows on source/target database |
 | `float-scale` | 3 | Scale for low-precision number casting |
+| `job-logging-enabled` | false | Write log messages to `dc_job_log` table for UI viewing |
 | `log-level` | INFO | Logging verbosity: DEBUG, INFO, WARNING, SEVERE |
 | `log-destination` | stdout | Log output location |
 | `number-cast` | notation | Number format: `notation` (scientific) or `standard` |
@@ -575,6 +576,8 @@ The HTML report includes:
 ## Projects
 
 Projects allow maintaining multiple comparison configurations in a single repository.
+
+> **Note:** Project 1 (pid=1) is reserved as the default project and is created automatically during repository initialization. Do not delete or reassign this project.
 
 ### Create a New Project
 

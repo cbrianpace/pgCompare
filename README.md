@@ -221,6 +221,8 @@ Examples:
 
 Projects allow for the repository to maintain different mappings for different compare objectives.  This allows a central pgCompare repository to be used for multiple compare projects.  Each table has a `pid` column which is the project id.  If no project is specified, the default project (pid = 1) is used.
 
+> **Note:** Project 1 (pid=1) is reserved as the default project and is created automatically during repository initialization. Do not delete or reassign this project.
+
 # Viewing Results
 
 ## Summary from Last Run
@@ -291,6 +293,12 @@ Properties are categorized into four sections: system, repository, source, and t
   Set the preferred scale used to cast low precision numbers.
 
   Default: 3
+
+#### job-logging-enabled
+
+  When set to true, log messages are written to the `dc_job_log` table in addition to the standard log destination. This enables viewing job logs through the pgCompare UI. The job must have an associated job ID (either from server mode or standalone job tracking).
+
+  Default: false
 
 #### loader-threads
 
