@@ -300,19 +300,19 @@ public interface RepoSQLConstants {
                                 """;
 
     String SQL_REPO_SELECT_OUTOFSYNC_ROWS = """
-                        SELECT DISTINCT tid, pk_hash, pk
+                        SELECT DISTINCT ON (pk_hash) tid, pk_hash, pk
                         FROM (SELECT tid, pk_hash, pk
                             FROM dc_source
                             WHERE tid = ?
                                   AND compare_result is not null
                                   AND compare_result != 'e'
-                            UNION
+                            UNION ALL
                             SELECT tid, pk_hash, pk
                             FROM dc_target
                             WHERE tid = ?
                                   AND compare_result is not null
                                   AND compare_result != 'e') x
-                        ORDER BY tid
+                        ORDER BY pk_hash, tid
                        """;
 
 
