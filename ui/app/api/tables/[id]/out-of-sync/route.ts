@@ -5,7 +5,6 @@ function serializeBigInt(obj: unknown): unknown {
   if (obj === null || obj === undefined) return obj;
   if (typeof obj === 'bigint') return Number(obj);
   if (obj instanceof Date) return obj.toISOString();
-  // Handle Prisma Decimal type (has toNumber method)
   if (typeof obj === 'object' && obj !== null && 'toNumber' in obj && typeof (obj as any).toNumber === 'function') {
     return (obj as any).toNumber();
   }
@@ -40,16 +39,13 @@ export async function GET(
     if (cid) {
       const cidNum = parseInt(cid);
       
-      // Verify this cid matches the tid and get table name
       const resultInfo = await prisma.$queryRawUnsafe(`
         SELECT table_name, tid FROM ${schema}.dc_result WHERE cid = $1
       `, cidNum) as any[];
       
-      // Convert BigInt to Number for comparison
       if (resultInfo && resultInfo.length > 0 && Number(resultInfo[0].tid) === tidNum) {
         tableName = resultInfo[0].table_name || tableName;
         
-        // Get out-of-sync rows from dc_source/dc_target
         sourceRows = await prisma.$queryRawUnsafe(`
           SELECT 
             pk, 
@@ -58,7 +54,8 @@ export async function GET(
             compare_result, 
             thread_nbr,
             table_name,
-            batch_nbr
+            batch_nbr,
+            fix_sql
           FROM ${schema}.dc_source
           WHERE tid = $1
             AND compare_result IN ('n', 'm')
@@ -74,7 +71,8 @@ export async function GET(
             compare_result, 
             thread_nbr,
             table_name,
-            batch_nbr
+            batch_nbr,
+            fix_sql
           FROM ${schema}.dc_target
           WHERE tid = $1
             AND compare_result IN ('n', 'm')
@@ -83,7 +81,6 @@ export async function GET(
         `, tidNum) as any[];
       }
     } else {
-      // No cid - get latest data (backward compatible)
       sourceRows = await prisma.$queryRawUnsafe(`
         SELECT 
           pk, 
@@ -92,7 +89,8 @@ export async function GET(
           compare_result, 
           thread_nbr,
           table_name,
-          batch_nbr
+          batch_nbr,
+          fix_sql
         FROM ${schema}.dc_source
         WHERE tid = $1
           AND compare_result IN ('n', 'm')
@@ -108,7 +106,8 @@ export async function GET(
           compare_result, 
           thread_nbr,
           table_name,
-          batch_nbr
+          batch_nbr,
+          fix_sql
         FROM ${schema}.dc_target
         WHERE tid = $1
           AND compare_result IN ('n', 'm')

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { X, Play, Calendar, Server as ServerIcon } from 'lucide-react';
 import { Project, Server } from '@/lib/types';
 import { toast } from '@/components/Toaster';
@@ -9,10 +10,13 @@ interface ScheduleJobModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  onJobCreated?: (jobId: string) => void;
   preselectedProject?: number;
+  navigateToJob?: boolean;
 }
 
-export default function ScheduleJobModal({ isOpen, onClose, onSuccess, preselectedProject }: ScheduleJobModalProps) {
+export default function ScheduleJobModal({ isOpen, onClose, onSuccess, onJobCreated, preselectedProject, navigateToJob = true }: ScheduleJobModalProps) {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [servers, setServers] = useState<Server[]>([]);
   const [loading, setLoading] = useState(false);
@@ -27,6 +31,7 @@ export default function ScheduleJobModal({ isOpen, onClose, onSuccess, preselect
     target_server_id: '' as string,
     schedule_now: true,
     scheduled_at: '',
+    fix: false,
   });
 
   useEffect(() => {
@@ -72,6 +77,7 @@ export default function ScheduleJobModal({ isOpen, onClose, onSuccess, preselect
 
     setSubmitting(true);
     try {
+      const jobConfig = formData.fix ? { fix: true } : null;
       const response = await fetch('/api/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -84,6 +90,7 @@ export default function ScheduleJobModal({ isOpen, onClose, onSuccess, preselect
           target_server_id: formData.target_server_id || null,
           scheduled_at: formData.schedule_now ? null : formData.scheduled_at || null,
           created_by: 'ui',
+          job_config: jobConfig,
         }),
       });
 
@@ -91,9 +98,17 @@ export default function ScheduleJobModal({ isOpen, onClose, onSuccess, preselect
         throw new Error('Failed to schedule job');
       }
 
+      const result = await response.json();
+      const jobId = Array.isArray(result) && result.length > 0 ? result[0].job_id : result.job_id;
+      
       toast.success('Job scheduled successfully');
       onSuccess?.();
+      onJobCreated?.(jobId);
       onClose();
+      
+      if (navigateToJob && jobId) {
+        router.push(`/jobs/${jobId}`);
+      }
     } catch (error) {
       console.error('Failed to schedule job:', error);
       toast.error('Failed to schedule job');
@@ -146,7 +161,7 @@ export default function ScheduleJobModal({ isOpen, onClose, onSuccess, preselect
             </label>
             <select
               value={formData.job_type}
-              onChange={(e) => setFormData({ ...formData, job_type: e.target.value as any })}
+              onChange={(e) => setFormData({ ...formData, job_type: e.target.value as any, fix: false })}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="compare">Compare</option>
@@ -154,6 +169,27 @@ export default function ScheduleJobModal({ isOpen, onClose, onSuccess, preselect
               <option value="discover">Discover Tables</option>
             </select>
           </div>
+
+          {/* Fix Option - only shown for Check mode */}
+          {formData.job_type === 'check' && (
+            <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-md border border-amber-200 dark:border-amber-800">
+              <input
+                type="checkbox"
+                id="fix-option"
+                checked={formData.fix}
+                onChange={(e) => setFormData({ ...formData, fix: e.target.checked })}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-amber-600 focus:ring-amber-500"
+              />
+              <div>
+                <label htmlFor="fix-option" className="block text-sm font-medium text-amber-800 dark:text-amber-200 cursor-pointer">
+                  Generate Fix SQL
+                </label>
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                  Generate INSERT, UPDATE, and DELETE statements to synchronize target with source (experimental)
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Priority */}
           <div>

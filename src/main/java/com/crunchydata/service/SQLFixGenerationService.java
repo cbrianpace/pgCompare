@@ -24,9 +24,17 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import javax.sql.rowset.CachedRowSet;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -87,7 +95,7 @@ public class SQLFixGenerationService {
             } else if (isNotEqual(rowResult)) {
                 // Row exists on both but columns don't match -> UPDATE target
                 return generateUpdateSQL(sourceConn, targetConn, dctmSource, dctmTarget, 
-                                       binds, pk, rowResult);
+                                       binds, pk, rowResult, columnMapping);
             }
             
         } catch (Exception e) {
@@ -298,6 +306,7 @@ public class SQLFixGenerationService {
     
     /**
      * Generates an UPDATE statement for the target database.
+     * Uses column mapping to correctly map source column names to target column names.
      * 
      * @param sourceConn Source database connection
      * @param targetConn Target database connection
@@ -306,11 +315,13 @@ public class SQLFixGenerationService {
      * @param binds Bind parameters for the WHERE clause
      * @param pk Primary key JSONObject
      * @param rowResult Row result from reCheck containing differences
+     * @param columnMapping Column mapping JSON containing source-to-target column mappings
      * @return UPDATE SQL statement
      */
     private static String generateUpdateSQL(Connection sourceConn, Connection targetConn,
                                            DataComparisonTableMap dctmSource, DataComparisonTableMap dctmTarget,
-                                           ArrayList<Object> binds, JSONObject pk, JSONObject rowResult) {
+                                           ArrayList<Object> binds, JSONObject pk, JSONObject rowResult,
+                                           JSONObject columnMapping) {
         try {
             String targetQuoteChar = getQuoteChar(Props.getProperty("target-type"));
             
@@ -326,18 +337,59 @@ public class SQLFixGenerationService {
             
             sourceRow.next();
             
-            // Build SET clause with all columns from source
+            // Parse column mapping to get source and target column information
+            JSONArray columns = columnMapping.getJSONArray("columns");
+            
+            // Build SET clause using column mapping for proper name translation
             List<String> setItems = new ArrayList<>();
             
-            int columnCount = sourceRow.getMetaData().getColumnCount();
-            
-            // Start from column 3 (skip pk_hash and pk columns from compare SQL)
-            for (int i = 3; i <= columnCount; i++) {
-                String columnName = sourceRow.getMetaData().getColumnName(i);
-                String quotedColumnName = ShouldQuoteString(false, columnName, targetQuoteChar);
+            for (int i = 0; i < columns.length(); i++) {
+                JSONObject columnDef = columns.getJSONObject(i);
                 
-                Object value = sourceRow.getObject(i);
-                setItems.add(quotedColumnName + " = " + formatValue(value));
+                // Skip disabled columns
+                if (!columnDef.getBoolean("enabled")) {
+                    continue;
+                }
+                
+                // Get source and target column information
+                JSONObject sourceCol = columnDef.getJSONObject("source");
+                JSONObject targetCol = columnDef.getJSONObject("target");
+                
+                // Skip primary key columns - don't update PKs
+                if (sourceCol.getBoolean("primaryKey")) {
+                    continue;
+                }
+                
+                String sourceColumnName = sourceCol.getString("columnName");
+                String targetColumnName = targetCol.getString("columnName");
+                boolean targetPreserveCase = targetCol.getBoolean("preserveCase");
+                
+                // Quote target column name based on target's preserveCase setting
+                String quotedTargetColumnName = ShouldQuoteString(targetPreserveCase, 
+                                                                   targetColumnName, 
+                                                                   targetQuoteChar);
+                
+                // Get value from source row using source column name
+                try {
+                    Object value = sourceRow.getObject(sourceColumnName);
+                    setItems.add(quotedTargetColumnName + " = " + formatValue(value));
+                } catch (SQLException e) {
+                    // Try with different case if the column name doesn't match exactly
+                    try {
+                        Object value = sourceRow.getObject(sourceColumnName.toLowerCase());
+                        setItems.add(quotedTargetColumnName + " = " + formatValue(value));
+                    } catch (SQLException e2) {
+                        LoggingUtils.write("warning", THREAD_NAME, 
+                            String.format("Could not find column '%s' in source result set for UPDATE pk %s", 
+                                         sourceColumnName, pk));
+                    }
+                }
+            }
+            
+            if (setItems.isEmpty()) {
+                LoggingUtils.write("warning", THREAD_NAME, 
+                    String.format("No columns to update for pk: %s", pk.toString()));
+                return null;
             }
             
             // Build UPDATE statement
@@ -370,6 +422,7 @@ public class SQLFixGenerationService {
     
     /**
      * Builds a WHERE clause from a primary key JSONObject.
+     * Handles NULL values correctly using IS NULL syntax.
      * 
      * @param pk Primary key JSONObject
      * @param quoteChar Quote character for identifiers
@@ -381,48 +434,238 @@ public class SQLFixGenerationService {
         Iterator<String> keys = pk.keys();
         while (keys.hasNext()) {
             String key = keys.next();
-            // Remove any existing quotes from the key
             String cleanKey = key.replace("`", "").replace("\"", "");
             String quotedKey = ShouldQuoteString(false, cleanKey, quoteChar);
             
-            Object value = pk.get(key);
-            whereItems.add(quotedKey + " = " + formatValue(value));
+            Object value = pk.opt(key);
+            if (value == null || value == JSONObject.NULL) {
+                whereItems.add(quotedKey + " IS NULL");
+            } else {
+                whereItems.add(quotedKey + " = " + formatValue(value));
+            }
         }
         
         return String.join(" AND ", whereItems);
     }
     
     /**
-     * Formats a value for SQL statement (adds quotes for strings, handles nulls, etc.).
+     * Formats a value for SQL statement based on target database type.
+     * Handles various data types with proper escaping and database-specific syntax.
      * 
      * @param value Value to format
-     * @return Formatted value string
+     * @return Formatted value string suitable for target database
      */
     private static String formatValue(Object value) {
-        switch (value) {
-            case null -> {
-                return "NULL";
-            }
-            case String s -> {
-                // Escape single quotes by doubling them
-                String stringValue = s;
-                stringValue = stringValue.replace("'", "''");
-                return "'" + stringValue + "'";
-            }
-            case Number number -> {
-                return value.toString();
-            }
-            case Boolean b -> {
-                return value.toString();
-            }
-            default -> {
-            }
+        return formatValueForTarget(value, Props.getProperty("target-type"));
+    }
+    
+    /**
+     * Formats a value for SQL statement with explicit target database type.
+     * 
+     * @param value Value to format
+     * @param targetType Target database type (postgres, oracle, mysql, etc.)
+     * @return Formatted value string suitable for target database
+     */
+    private static String formatValueForTarget(Object value, String targetType) {
+        if (value == null) {
+            return "NULL";
         }
-
-        // For other types, convert to string and quote
-        String stringValue = value.toString();
-        stringValue = stringValue.replace("'", "''");
-        return "'" + stringValue + "'";
+        
+        return switch (value) {
+            case String s -> formatString(s);
+            case Boolean b -> formatBoolean(b, targetType);
+            case Integer i -> i.toString();
+            case Long l -> l.toString();
+            case Double d -> {
+                if (d.isNaN()) yield "NULL";
+                if (d.isInfinite()) yield "NULL";
+                yield d.toString();
+            }
+            case Float f -> {
+                if (f.isNaN()) yield "NULL";
+                if (f.isInfinite()) yield "NULL";
+                yield f.toString();
+            }
+            case BigDecimal bd -> bd.toPlainString();
+            case Number n -> n.toString();
+            case Timestamp ts -> formatTimestamp(ts, targetType);
+            case java.sql.Date d -> formatDate(d, targetType);
+            case java.sql.Time t -> formatTime(t, targetType);
+            case Date d -> formatJavaDate(d, targetType);
+            case LocalDateTime ldt -> formatLocalDateTime(ldt, targetType);
+            case LocalDate ld -> formatLocalDate(ld, targetType);
+            case LocalTime lt -> formatLocalTime(lt, targetType);
+            case OffsetDateTime odt -> formatOffsetDateTime(odt, targetType);
+            case byte[] bytes -> formatBinary(bytes, targetType);
+            default -> {
+                String stringValue = value.toString();
+                if (stringValue == null || stringValue.isEmpty()) {
+                    yield "NULL";
+                }
+                yield formatString(stringValue);
+            }
+        };
+    }
+    
+    /**
+     * Formats a string value with proper escaping.
+     */
+    private static String formatString(String value) {
+        if (value == null) {
+            return "NULL";
+        }
+        String escaped = value.replace("'", "''");
+        escaped = escaped.replace("\\", "\\\\");
+        return "'" + escaped + "'";
+    }
+    
+    /**
+     * Formats a boolean value for the target database.
+     */
+    private static String formatBoolean(Boolean value, String targetType) {
+        return switch (targetType) {
+            case "postgres" -> value ? "TRUE" : "FALSE";
+            case "oracle", "db2" -> value ? "1" : "0";
+            case "mysql", "mariadb" -> value ? "1" : "0";
+            case "mssql" -> value ? "1" : "0";
+            case "snowflake" -> value ? "TRUE" : "FALSE";
+            default -> value.toString();
+        };
+    }
+    
+    /**
+     * Formats a Timestamp for the target database.
+     */
+    private static String formatTimestamp(Timestamp ts, String targetType) {
+        String formatted = ts.toString();
+        if (formatted.endsWith(".0")) {
+            formatted = formatted.substring(0, formatted.length() - 2);
+        }
+        return switch (targetType) {
+            case "oracle" -> String.format("TO_TIMESTAMP('%s', 'YYYY-MM-DD HH24:MI:SS.FF')", formatted);
+            case "mssql" -> String.format("CAST('%s' AS DATETIME2)", formatted);
+            case "mysql", "mariadb" -> String.format("'%s'", formatted);
+            case "snowflake" -> String.format("TO_TIMESTAMP('%s')", formatted);
+            default -> String.format("'%s'::timestamp", formatted);
+        };
+    }
+    
+    /**
+     * Formats a SQL Date for the target database.
+     */
+    private static String formatDate(java.sql.Date d, String targetType) {
+        String formatted = d.toString();
+        return switch (targetType) {
+            case "oracle" -> String.format("TO_DATE('%s', 'YYYY-MM-DD')", formatted);
+            case "mssql" -> String.format("CAST('%s' AS DATE)", formatted);
+            case "snowflake" -> String.format("TO_DATE('%s')", formatted);
+            default -> String.format("'%s'::date", formatted);
+        };
+    }
+    
+    /**
+     * Formats a SQL Time for the target database.
+     */
+    private static String formatTime(java.sql.Time t, String targetType) {
+        String formatted = t.toString();
+        return switch (targetType) {
+            case "oracle" -> String.format("TO_TIMESTAMP('%s', 'HH24:MI:SS')", formatted);
+            case "mssql" -> String.format("CAST('%s' AS TIME)", formatted);
+            case "snowflake" -> String.format("TO_TIME('%s')", formatted);
+            default -> String.format("'%s'::time", formatted);
+        };
+    }
+    
+    /**
+     * Formats a Java Date for the target database.
+     */
+    private static String formatJavaDate(Date d, String targetType) {
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String formatted = sdf.format(d);
+        return switch (targetType) {
+            case "oracle" -> String.format("TO_TIMESTAMP('%s', 'YYYY-MM-DD HH24:MI:SS')", formatted);
+            case "mssql" -> String.format("CAST('%s' AS DATETIME2)", formatted);
+            case "snowflake" -> String.format("TO_TIMESTAMP('%s')", formatted);
+            default -> String.format("'%s'::timestamp", formatted);
+        };
+    }
+    
+    /**
+     * Formats a LocalDateTime for the target database.
+     */
+    private static String formatLocalDateTime(LocalDateTime ldt, String targetType) {
+        String formatted = ldt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        return switch (targetType) {
+            case "oracle" -> String.format("TO_TIMESTAMP('%s', 'YYYY-MM-DD HH24:MI:SS')", formatted);
+            case "mssql" -> String.format("CAST('%s' AS DATETIME2)", formatted);
+            case "snowflake" -> String.format("TO_TIMESTAMP('%s')", formatted);
+            default -> String.format("'%s'::timestamp", formatted);
+        };
+    }
+    
+    /**
+     * Formats a LocalDate for the target database.
+     */
+    private static String formatLocalDate(LocalDate ld, String targetType) {
+        String formatted = ld.format(DateTimeFormatter.ISO_LOCAL_DATE);
+        return switch (targetType) {
+            case "oracle" -> String.format("TO_DATE('%s', 'YYYY-MM-DD')", formatted);
+            case "mssql" -> String.format("CAST('%s' AS DATE)", formatted);
+            case "snowflake" -> String.format("TO_DATE('%s')", formatted);
+            default -> String.format("'%s'::date", formatted);
+        };
+    }
+    
+    /**
+     * Formats a LocalTime for the target database.
+     */
+    private static String formatLocalTime(LocalTime lt, String targetType) {
+        String formatted = lt.format(DateTimeFormatter.ISO_LOCAL_TIME);
+        return switch (targetType) {
+            case "oracle" -> String.format("TO_TIMESTAMP('%s', 'HH24:MI:SS')", formatted);
+            case "mssql" -> String.format("CAST('%s' AS TIME)", formatted);
+            case "snowflake" -> String.format("TO_TIME('%s')", formatted);
+            default -> String.format("'%s'::time", formatted);
+        };
+    }
+    
+    /**
+     * Formats an OffsetDateTime for the target database.
+     */
+    private static String formatOffsetDateTime(OffsetDateTime odt, String targetType) {
+        String formatted = odt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        return switch (targetType) {
+            case "oracle" -> String.format("TO_TIMESTAMP_TZ('%s', 'YYYY-MM-DD HH24:MI:SS TZH:TZM')", 
+                odt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss xxx")));
+            case "mssql" -> String.format("CAST('%s' AS DATETIMEOFFSET)", 
+                odt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
+            case "snowflake" -> String.format("TO_TIMESTAMP_TZ('%s')", 
+                odt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
+            case "postgres" -> String.format("'%s'::timestamptz", 
+                odt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
+            default -> String.format("'%s'", formatted);
+        };
+    }
+    
+    /**
+     * Formats binary data for the target database.
+     */
+    private static String formatBinary(byte[] bytes, String targetType) {
+        if (bytes == null || bytes.length == 0) {
+            return "NULL";
+        }
+        StringBuilder hex = new StringBuilder();
+        for (byte b : bytes) {
+            hex.append(String.format("%02x", b));
+        }
+        return switch (targetType) {
+            case "postgres" -> String.format("'\\x%s'::bytea", hex);
+            case "oracle" -> String.format("HEXTORAW('%s')", hex);
+            case "mssql" -> String.format("0x%s", hex);
+            case "mysql", "mariadb" -> String.format("X'%s'", hex);
+            case "snowflake" -> String.format("TO_BINARY('%s', 'HEX')", hex);
+            default -> String.format("'%s'", hex);
+        };
     }
     
 }

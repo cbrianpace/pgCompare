@@ -425,13 +425,30 @@ public class ServerModeService {
             Settings.Props.setProperty("batch", String.valueOf(batchNbr));
             Settings.Props.setProperty("pid", String.valueOf(pid));
             
-            // Set table filter if provided
-            if (tableFilter != null && !tableFilter.isEmpty()) {
-                Settings.Props.setProperty("table", tableFilter);
+            // Set table filter - always set it to clear any previous value
+            Settings.Props.setProperty("table", tableFilter != null ? tableFilter : "");
+            
+            // Clear isCheck flag from any previous job
+            Settings.Props.setProperty("isCheck", "false");
+            
+            // Apply fix setting from job_config if present
+            if (jobConfig != null && !jobConfig.isEmpty()) {
+                try {
+                    org.json.JSONObject config = new org.json.JSONObject(jobConfig);
+                    if (config.has("fix")) {
+                        Settings.Props.setProperty("fix", String.valueOf(config.getBoolean("fix")));
+                    }
+                } catch (Exception e) {
+                    LoggingUtils.write("warning", THREAD_NAME, 
+                        String.format("Failed to parse job_config: %s", e.getMessage()));
+                }
             }
             
             LoggingUtils.write("info", THREAD_NAME, 
                 String.format("Starting job %s: type=%s, pid=%d, batch=%d", jobId, jobType, pid, batchNbr));
+            
+            // Log configuration parameters for full job visibility
+            logConfigurationParameters();
             
             // Execute based on job type
             switch (jobType) {
@@ -798,6 +815,18 @@ public class ServerModeService {
         } catch (Exception e) {
             return "unknown";
         }
+    }
+    
+    /**
+     * Log configuration parameters (excluding passwords) for job visibility.
+     * Mirrors the standalone behavior from ApplicationContext.logConfigurationParameters().
+     */
+    private void logConfigurationParameters() {
+        LoggingUtils.write("info", THREAD_NAME, "Parameters: ");
+        Settings.Props.entrySet().stream()
+                .filter(e -> !e.getKey().toString().contains("password"))
+                .sorted((e1, e2) -> e1.getKey().toString().compareTo(e2.getKey().toString()))
+                .forEach(e -> LoggingUtils.write("info", THREAD_NAME, String.format("  %s", e)));
     }
 
     /**

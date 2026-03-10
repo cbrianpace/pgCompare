@@ -300,7 +300,7 @@ public class ApplicationContext {
         }
 
         try {
-            com.crunchydata.controller.CompareController.performCompare(this);
+            com.crunchydata.controller.CompareController.performCompare(this, jobService);
 
             if (jobService != null) {
                 jobService.completeJob(null);

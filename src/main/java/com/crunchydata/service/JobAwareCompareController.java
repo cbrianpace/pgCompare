@@ -85,11 +85,16 @@ public class JobAwareCompareController {
         try {
             // Pre-populate progress for all tables before processing
             LoggingUtils.write("info", THREAD_NAME, "Pre-populating job progress for all tables");
+            int tableCount = 0;
             while (tablesResultSet.next()) {
                 long tid = tablesResultSet.getLong("tid");
                 String tableAlias = tablesResultSet.getString("table_alias");
                 serverService.initializeJobProgress(jobId, tid, tableAlias);
+                tableCount++;
             }
+            LoggingUtils.write("info", THREAD_NAME, 
+                String.format("Found %d table(s) to process", tableCount));
+            
             // Reset cursor to beginning
             tablesResultSet.beforeFirst();
             
@@ -318,6 +323,11 @@ public class JobAwareCompareController {
         if (table != null && !table.isEmpty()) {
             binds.add(table);
         }
+
+        LoggingUtils.write("info", THREAD_NAME,
+            String.format("Retrieving tables: pid=%d, batch=%d, table='%s', check=%s", 
+                pid, batchNbr, table, check));
+        LoggingUtils.write("debug", THREAD_NAME, String.format("Tables query: %s", sql));
 
         return SQLExecutionHelper.simpleSelect(conn, sql, binds);
     }

@@ -40,7 +40,8 @@ CREATE TABLE dc_source (
 	pk_hash varchar(100) NULL,
 	column_hash varchar(100) NULL,
 	compare_result bpchar(1) NULL,
-	thread_nbr int4 NULL
+	thread_nbr int4 NULL,
+	fix_sql text NULL
 );
 
 -- DROP TABLE dc_table;
@@ -122,7 +123,8 @@ CREATE TABLE dc_target (
 	pk_hash varchar(100) NULL,
 	column_hash varchar(100) NULL,
 	compare_result bpchar(1) NULL,
-	thread_nbr int4 NULL
+	thread_nbr int4 NULL,
+	fix_sql text NULL
 );
 
 

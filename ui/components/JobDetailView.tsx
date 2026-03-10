@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowLeft, PlayCircle, PauseCircle, StopCircle, XCircle, CheckCircle, Clock, RefreshCw, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, PlayCircle, PauseCircle, StopCircle, XCircle, CheckCircle, Clock, RefreshCw, AlertTriangle, Code, Copy, Check, FlaskConical } from 'lucide-react';
 import { Job } from '@/lib/types';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
@@ -25,6 +25,16 @@ interface JobProgress {
   cid: number | null;
 }
 
+interface FixSqlEntry {
+  tid: number;
+  pk: any;
+  pk_hash: string;
+  compare_result: string;
+  fix_type: string;
+  fix_sql: string;
+  table_name?: string;
+}
+
 interface JobDetailViewProps {
   jobId: string;
   onBack: () => void;
@@ -33,8 +43,11 @@ interface JobDetailViewProps {
 export default function JobDetailView({ jobId, onBack }: JobDetailViewProps) {
   const [job, setJob] = useState<Job | null>(null);
   const [progress, setProgress] = useState<JobProgress[]>([]);
+  const [fixSqlEntries, setFixSqlEntries] = useState<FixSqlEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTable, setSelectedTable] = useState<{ tid: number; tableName: string; cid?: number | null } | null>(null);
+  const [copiedSql, setCopiedSql] = useState<string | null>(null);
+  const [showFixSql, setShowFixSql] = useState(false);
 
   useEffect(() => {
     loadJobDetails();
@@ -52,6 +65,10 @@ export default function JobDetailView({ jobId, onBack }: JobDetailViewProps) {
       if (jobRes.ok) {
         const jobData = await jobRes.json();
         setJob(jobData);
+        
+        if (jobData.job_type === 'check' && (jobData.status === 'completed' || jobData.status === 'running')) {
+          loadFixSql(jobData.pid);
+        }
       }
       
       if (progressRes.ok) {
@@ -62,6 +79,37 @@ export default function JobDetailView({ jobId, onBack }: JobDetailViewProps) {
       console.error('Failed to load job details:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadFixSql = async (pid: number) => {
+    try {
+      const tablesRes = await fetch(`/api/projects/${pid}/tables`);
+      if (!tablesRes.ok) return;
+      
+      const tables = await tablesRes.json();
+      const allFixSql: FixSqlEntry[] = [];
+      
+      for (const table of tables) {
+        const fixRes = await fetch(`/api/tables/${table.tid}/fix-sql`);
+        if (fixRes.ok) {
+          const fixData = await fixRes.json();
+          if (Array.isArray(fixData)) {
+            fixData.forEach((entry: any) => {
+              if (entry.fix_sql) {
+                allFixSql.push({
+                  ...entry,
+                  table_name: table.table_alias
+                });
+              }
+            });
+          }
+        }
+      }
+      
+      setFixSqlEntries(allFixSql);
+    } catch (error) {
+      console.error('Failed to load fix SQL:', error);
     }
   };
 
@@ -81,6 +129,29 @@ export default function JobDetailView({ jobId, onBack }: JobDetailViewProps) {
       }
     } catch (error) {
       toast.error(`Failed to send ${signal} signal`);
+    }
+  };
+
+  const copyToClipboard = async (sql: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(sql);
+      setCopiedSql(id);
+      toast.success('SQL copied to clipboard');
+      setTimeout(() => setCopiedSql(null), 2000);
+    } catch (error) {
+      toast.error('Failed to copy to clipboard');
+    }
+  };
+
+  const copyAllFixSql = async () => {
+    const allSql = fixSqlEntries.map(entry => entry.fix_sql).join(';\n\n');
+    if (allSql) {
+      try {
+        await navigator.clipboard.writeText(allSql + ';');
+        toast.success('All fix SQL copied to clipboard');
+      } catch (error) {
+        toast.error('Failed to copy to clipboard');
+      }
     }
   };
 
@@ -133,6 +204,9 @@ export default function JobDetailView({ jobId, onBack }: JobDetailViewProps) {
   const totalEqual = progress.reduce((sum, p) => sum + (p.equal_cnt || 0), 0);
   const totalNotEqual = progress.reduce((sum, p) => sum + (p.not_equal_cnt || 0), 0);
   const totalMissing = progress.reduce((sum, p) => sum + (p.missing_source_cnt || 0) + (p.missing_target_cnt || 0), 0);
+
+  const isCheckJob = job.job_type === 'check';
+  const hasFixSql = fixSqlEntries.length > 0;
 
   return (
     <div className="space-y-4">
@@ -277,6 +351,12 @@ export default function JobDetailView({ jobId, onBack }: JobDetailViewProps) {
               <dt className="text-gray-500 dark:text-gray-400">Missing</dt>
               <dd className="font-medium text-red-600">{totalMissing.toLocaleString()}</dd>
             </div>
+            {isCheckJob && (
+              <div className="flex justify-between">
+                <dt className="text-gray-500 dark:text-gray-400">Fix SQL Generated</dt>
+                <dd className="font-medium text-blue-600">{fixSqlEntries.length}</dd>
+              </div>
+            )}
           </dl>
         </div>
       </div>
@@ -289,6 +369,81 @@ export default function JobDetailView({ jobId, onBack }: JobDetailViewProps) {
             <span className="font-medium">Error</span>
           </div>
           <p className="mt-2 text-sm text-red-600 dark:text-red-300">{job.error_message}</p>
+        </div>
+      )}
+
+      {/* Fix SQL Section for Check Jobs */}
+      {isCheckJob && hasFixSql && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          <div 
+            className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+            onClick={() => setShowFixSql(!showFixSql)}
+          >
+            <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <Code className="h-5 w-5 text-blue-500" />
+              Fix SQL Statements ({fixSqlEntries.length})
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 rounded text-xs font-normal">
+                <FlaskConical className="h-3 w-3" />
+                Experimental
+              </span>
+            </h3>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyAllFixSql();
+                }}
+                className="px-3 py-1.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 rounded text-sm flex items-center gap-2"
+              >
+                <Copy className="h-4 w-4" />
+                Copy All
+              </button>
+              <span className="text-gray-400">{showFixSql ? '▼' : '▶'}</span>
+            </div>
+          </div>
+          
+          {showFixSql && (
+            <div className="p-4 space-y-4">
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <div className="flex items-start gap-2">
+                  <FlaskConical className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-amber-800 dark:text-amber-200">
+                    <p className="font-medium">Experimental Feature</p>
+                    <p className="mt-1">These SQL statements are designed to be executed on the <strong>target database</strong> to make it match the source. Review carefully before executing.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="max-h-96 overflow-y-auto space-y-3">
+              {fixSqlEntries.map((entry, index) => (
+                <div key={index} className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">{entry.table_name}</span>
+                      {' • '}
+                      <span className="capitalize">{entry.fix_type}</span>
+                      {' • '}
+                      PK: <span className="font-mono">{typeof entry.pk === 'object' ? JSON.stringify(entry.pk) : entry.pk}</span>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(entry.fix_sql, `fix-${index}`)}
+                      className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                      title="Copy to clipboard"
+                    >
+                      {copiedSql === `fix-${index}` ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4 text-gray-500" />
+                      )}
+                    </button>
+                  </div>
+                  <pre className="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
+                    {entry.fix_sql}
+                  </pre>
+                </div>
+              ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

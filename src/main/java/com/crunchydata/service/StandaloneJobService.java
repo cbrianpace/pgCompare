@@ -51,6 +51,22 @@ public class StandaloneJobService {
             WHERE job_id = ?::uuid
             """;
 
+    private static final String SQL_JOBPROGRESS_INSERT = """
+            INSERT INTO dc_job_progress (job_id, tid, table_name, status)
+            VALUES (?::uuid, ?, ?, 'pending')
+            ON CONFLICT (job_id, tid) DO NOTHING
+            """;
+
+    private static final String SQL_JOBPROGRESS_UPDATE = """
+            UPDATE dc_job_progress
+            SET status = ?,
+                started_at = CASE WHEN ? = 'running' THEN COALESCE(started_at, current_timestamp) ELSE started_at END,
+                completed_at = CASE WHEN ? IN ('completed', 'failed', 'skipped') THEN current_timestamp ELSE completed_at END,
+                error_message = COALESCE(?, error_message),
+                cid = COALESCE(?, cid)
+            WHERE job_id = ?::uuid AND tid = ?
+            """;
+
     private final Connection connRepo;
     private UUID currentJobId;
 
@@ -151,6 +167,65 @@ public class StandaloneJobService {
      */
     public UUID getCurrentJobId() {
         return currentJobId;
+    }
+    
+    /**
+     * Initialize job progress records for a table.
+     * This should be called before processing each table.
+     *
+     * @param tid Table ID
+     * @param tableName Table name
+     */
+    public void initializeTableProgress(long tid, String tableName) {
+        if (currentJobId == null) {
+            return;
+        }
+        
+        try {
+            ArrayList<Object> binds = new ArrayList<>();
+            binds.add(currentJobId.toString());
+            binds.add(tid);
+            binds.add(tableName);
+            
+            SQLExecutionHelper.simpleUpdate(connRepo, SQL_JOBPROGRESS_INSERT, binds, true);
+            LoggingUtils.write("debug", THREAD_NAME, 
+                String.format("Initialized progress for table %s (tid=%d)", tableName, tid));
+        } catch (Exception e) {
+            LoggingUtils.write("warning", THREAD_NAME, 
+                String.format("Failed to initialize table progress: %s", e.getMessage()));
+        }
+    }
+    
+    /**
+     * Update progress for a specific table.
+     *
+     * @param tid Table ID
+     * @param status Status (pending, running, completed, failed, skipped)
+     * @param errorMessage Error message if failed
+     * @param cid Compare ID if available
+     */
+    public void updateTableProgress(long tid, String status, String errorMessage, Integer cid) {
+        if (currentJobId == null) {
+            return;
+        }
+        
+        try {
+            ArrayList<Object> binds = new ArrayList<>();
+            binds.add(status);
+            binds.add(status);
+            binds.add(status);
+            binds.add(errorMessage);
+            binds.add(cid);
+            binds.add(currentJobId.toString());
+            binds.add(tid);
+            
+            SQLExecutionHelper.simpleUpdate(connRepo, SQL_JOBPROGRESS_UPDATE, binds, true);
+            LoggingUtils.write("debug", THREAD_NAME, 
+                String.format("Updated progress for tid=%d: status=%s", tid, status));
+        } catch (Exception e) {
+            LoggingUtils.write("warning", THREAD_NAME, 
+                String.format("Failed to update table progress: %s", e.getMessage()));
+        }
     }
 
     /**

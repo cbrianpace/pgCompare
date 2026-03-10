@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { ChevronRight, ChevronDown, Folder, Table, X, Plus, Search, Upload } from 'lucide-react';
 import { Project, Table as TableType, Result } from '@/lib/types';
 import { toast } from '@/components/Toaster';
+import AddTableModal from './AddTableModal';
 
 interface NavigationTreeProps {
   onProjectSelect: (projectId: number) => void;
@@ -31,6 +32,7 @@ export default function NavigationTree({
   const [importingProject, setImportingProject] = useState(false);
   const [importProjectName, setImportProjectName] = useState('');
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [addTableProjectId, setAddTableProjectId] = useState<number | null>(null);
 
   const filteredProjects = useMemo(() => {
     if (!searchQuery.trim()) return projects;
@@ -119,6 +121,17 @@ export default function NavigationTree({
     } catch (error) {
       console.error('Failed to load table status:', error);
     }
+  };
+
+  const handleTableCreated = (projectId: number, newTable: TableType) => {
+    const currentTables = projectTables.get(projectId) || [];
+    const updatedTables = [...currentTables, newTable].sort((a, b) => 
+      a.table_alias.localeCompare(b.table_alias)
+    );
+    setProjectTables(new Map(projectTables).set(projectId, updatedTables));
+    setAddTableProjectId(null);
+    toast.success(`Table "${newTable.table_alias}" created`);
+    onTableSelect(newTable.tid);
   };
 
   const handleCreateProject = async () => {
@@ -410,11 +423,26 @@ export default function NavigationTree({
                     </div>
                   );
                 })}
+                <button
+                  onClick={() => setAddTableProjectId(project.pid)}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-blue-600 dark:text-blue-400 w-full text-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Table
+                </button>
               </div>
             )}
           </div>
         );
       })}
+
+      {addTableProjectId !== null && (
+        <AddTableModal
+          projectId={addTableProjectId}
+          onClose={() => setAddTableProjectId(null)}
+          onTableCreated={(table) => handleTableCreated(addTableProjectId, table)}
+        />
+      )}
     </div>
   );
 }

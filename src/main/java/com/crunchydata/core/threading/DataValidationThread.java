@@ -84,6 +84,13 @@ public class DataValidationThread {
         PreparedStatement stmt = null;
         ResultSet rs = null;
         
+        // Get job_id from logging context if available
+        String jobId = null;
+        LoggingUtils.JobLogContext ctx = LoggingUtils.getJobContext();
+        if (ctx != null && ctx.getJobId() != null) {
+            jobId = ctx.getJobId().toString();
+        }
+        
         try {
             stmt = repoConn.prepareStatement(SQL_REPO_SELECT_OUTOFSYNC_ROWS);
             stmt.setObject(1, dct.getTid());
@@ -150,10 +157,20 @@ public class DataValidationThread {
                     JSONObject row = rows.getJSONObject(i);
                     if (row.has("fixSQL")) {
                         JSONObject fixSQLEntry = new JSONObject();
-                        fixSQLEntry.put("pk", row.get("pk"));
-                        fixSQLEntry.put("sql", row.getString("fixSQL"));
+                        String pkValue = row.getString("pk");
+                        String pkHash = row.getString("pkHash");
+                        String fixSQL = row.getString("fixSQL");
+                        fixSQLEntry.put("pk", pkValue);
+                        fixSQLEntry.put("sql", fixSQL);
                         fixSQLStatements.put(fixSQLEntry);
                         fixSQLCount++;
+                        
+                        // Store fix SQL to database (dc_source or dc_target)
+                        storeFixSQL(repoConn, dct.getTid(), pkHash, fixSQL);
+                        
+                        // Log each fix SQL statement
+                        LoggingUtils.write("info", THREAD_NAME, 
+                            String.format("Fix SQL [%s] PK=%s: %s", dct.getTableAlias(), pkValue, fixSQL));
                     }
                 }
                 
@@ -219,6 +236,7 @@ public class DataValidationThread {
 
         try {
             rowResult.put("pk", dcRow.getPk());
+            rowResult.put("pkHash", dcRow.getPkHash());
 
             if (sourceRow.size() > 0 && targetRow.size() == 0) {
                 rowResult.put("compareStatus", OUT_OF_SYNC_STATUS);
@@ -348,6 +366,51 @@ public class DataValidationThread {
         binds.add(3, cid);
         
         SQLExecutionHelper.simpleUpdate(repoConn, SQL_REPO_DCRESULT_UPDATE_ALLCOUNTS, binds, true);
+    }
+    
+    /**
+     * Stores fix SQL to dc_source or dc_target based on fix type.
+     * INSERT/UPDATE → dc_source (row exists in source)
+     * DELETE → dc_target (row only exists in target)
+     */
+    private static void storeFixSQL(Connection repoConn, long tid, String pkHash, String fixSQL) {
+        try {
+            String fixType = determineFixType(fixSQL);
+            String sql;
+            
+            if ("delete".equals(fixType)) {
+                sql = SQL_REPO_DCTARGET_UPDATE_FIXSQL;
+            } else {
+                sql = SQL_REPO_DCSOURCE_UPDATE_FIXSQL;
+            }
+            
+            ArrayList<Object> binds = new ArrayList<>();
+            binds.add(fixSQL);
+            binds.add(tid);
+            binds.add(pkHash);
+            
+            SQLExecutionHelper.simpleUpdate(repoConn, sql, binds, true);
+            LoggingUtils.write("debug", THREAD_NAME, 
+                String.format("Stored fix SQL (type=%s) for tid=%d, pk_hash=%s", fixType, tid, pkHash));
+        } catch (Exception e) {
+            LoggingUtils.write("warning", THREAD_NAME, 
+                String.format("Failed to store fix SQL to database: %s", e.getMessage()));
+        }
+    }
+    
+    /**
+     * Determines the fix type from SQL statement.
+     */
+    private static String determineFixType(String sql) {
+        String trimmedSQL = sql.trim().toUpperCase();
+        if (trimmedSQL.startsWith("INSERT")) {
+            return "insert";
+        } else if (trimmedSQL.startsWith("UPDATE")) {
+            return "update";
+        } else if (trimmedSQL.startsWith("DELETE")) {
+            return "delete";
+        }
+        return "update"; // default fallback
     }
 
 }

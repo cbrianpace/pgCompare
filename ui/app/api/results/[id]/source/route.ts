@@ -32,7 +32,8 @@ export async function GET(
         compare_result, 
         thread_nbr,
         table_name,
-        batch_nbr
+        batch_nbr,
+        fix_sql
       FROM dc_source
       WHERE tid = ${result.tid}
       ORDER BY pk_hash

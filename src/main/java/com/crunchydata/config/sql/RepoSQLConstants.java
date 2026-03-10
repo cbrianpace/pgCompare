@@ -71,7 +71,8 @@ public interface RepoSQLConstants {
                 pk_hash varchar(100) NULL,
                 column_hash varchar(100) NULL,
                 compare_result bpchar(1) NULL,
-                thread_nbr int4 NULL
+                thread_nbr int4 NULL,
+                fix_sql text NULL
             )
             """;
 
@@ -184,7 +185,8 @@ public interface RepoSQLConstants {
             	pk_hash varchar(100) NULL,
             	column_hash varchar(100) NULL,
             	compare_result bpchar(1) NULL,
-            	thread_nbr int4 NULL
+            	thread_nbr int4 NULL,
+            	fix_sql text NULL
             )
             """;
 
@@ -519,5 +521,28 @@ public interface RepoSQLConstants {
                   AND m.dest_type = ?
                   AND t.table_alias = ?
     """;
+
+    //
+    // Repository SQL - Fix SQL Updates
+    //
+    String SQL_REPO_DCSOURCE_UPDATE_FIXSQL = """
+            UPDATE dc_source SET fix_sql = ? WHERE tid = ? AND pk_hash = ?
+            """;
+
+    String SQL_REPO_DCTARGET_UPDATE_FIXSQL = """
+            UPDATE dc_target SET fix_sql = ? WHERE tid = ? AND pk_hash = ?
+            """;
+
+    String SQL_REPO_DCSOURCE_SELECT_FIXSQL_BYTID = """
+            SELECT tid, pk, pk_hash, compare_result, fix_sql
+            FROM dc_source
+            WHERE tid = ? AND fix_sql IS NOT NULL
+            """;
+
+    String SQL_REPO_DCTARGET_SELECT_FIXSQL_BYTID = """
+            SELECT tid, pk, pk_hash, compare_result, fix_sql
+            FROM dc_target
+            WHERE tid = ? AND fix_sql IS NOT NULL
+            """;
 
 }
