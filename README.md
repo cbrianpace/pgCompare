@@ -108,12 +108,14 @@ Actions:
 - **check**:  Recompare the out of sync rows from previous compare
 - **compare**:  Perform database compare
 - **copy-table**: Copy pgCompare metadata for table.  Must specify table alias to copy using --table option
-- **discover**:  Disocver tables and columns
+- **discover**:  Discover tables and columns
 - **export-config**: Export project configuration to properties file
 - **export-mapping**: Export table/column mappings to YAML file
 - **import-config**: Import properties file to project configuration
 - **import-mapping**: Import table/column mappings from YAML file
 - **init**: Initialize the repository database
+- **server**: Run in server mode (daemon that polls work queue for jobs)
+- **test-connection**: Test database connections and report status
 
 Options:
 
@@ -128,6 +130,8 @@ Options:
    -r|--report {file} Create html report of compare
 
    -t|--table {target table} (supports wildcards for export/import)
+
+   -n|--name {server name} Server name for server mode (default: pgcompare-server)
 
    --help
 
@@ -163,7 +167,19 @@ java -jar pgcompare.jar check --batch 0
 
 # Upgrading
 
-## Version 0.5.0 Enhacements
+## Version 0.6.0 Enhancements
+
+- **Server Mode** - Run pgCompare as a daemon that polls a work queue for jobs
+- **Web UI Enhancements** - Job scheduling, real-time progress tracking, job control (pause/resume/stop)
+- **Signal Handling** - Graceful shutdown (SIGINT), immediate termination (SIGTERM), config reload (SIGHUP)
+- **Fix SQL Improvements** - Enhanced data type handling, proper column mapping for UPDATE statements
+- **Database Schema** - New tables for server mode (dc_server, dc_job, dc_job_control, dc_job_progress, dc_job_log)
+
+**Note:** Drop and recreate the repository to upgrade to 0.6.0.
+
+For more details review the [v0.6.0 Release Notes](RELEASE_NOTES_v0.6.0.md)
+
+## Version 0.5.0 Enhancements
 
 - Snowflake Support - Full integration for Snowflake as source/target
 - SQL Fix Generation - Automatic generation of INSERT/UPDATE/DELETE statements (Preview, limited ability)
@@ -173,7 +189,7 @@ java -jar pgcompare.jar check --batch 0
 
 **Note:** Drop and recreate the repository to upgrade to 0.5.0.
 
-For more details review the [v0.5.0 Release Noes](RELEASE_NOTES_v0.5.0.md)
+For more details review the [v0.5.0 Release Notes](RELEASE_NOTES_v0.5.0.md)
 
 ## Version 0.4.0 Enhancements
 
