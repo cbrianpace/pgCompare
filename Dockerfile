@@ -14,7 +14,7 @@
 # Pull base image
 # ---------------
 ARG MAVEN_VERSION=3.9.9
-ARG NODE_VERSION=20
+ARG NODE_VERSION=22
 ARG BASE_REGISTRY=registry.access.redhat.com/ubi8
 ARG BASE_IMAGE=ubi-minimal
 ARG JAVA_OPT="-XX:UseSVE=0"

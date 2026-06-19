@@ -176,7 +176,7 @@ public class DataComparisonThread extends Thread {
 
                 if (totalRows % batchCommitSize == 0) {
                     if (useLoaderThreads) {
-                        handleLoaderThreadBatch(threadName, dc, batchCommitSize);
+                        dc = handleLoaderThreadBatch(threadName, dc, batchCommitSize);
                     } else {
                         handleDirectDatabaseBatch(stmtLoad, connRepo);
                     }
@@ -256,9 +256,15 @@ public class DataComparisonThread extends Thread {
     
     /**
      * Handles batch processing for loader threads.
+     *
+     * <p>The provided array is handed off to the loader thread via the queue. A new
+     * array is returned so the caller stops mutating the array now owned by the
+     * loader thread (which would otherwise cause a data race and corrupt findings).</p>
+     *
+     * @return a fresh array for the caller to continue filling
      */
-    private void handleLoaderThreadBatch(String threadName, DataComparisonResult[] dc, int batchCommitSize) throws InterruptedException {
-        if (q != null && q.size() == QUEUE_WAIT_THRESHOLD) {
+    private DataComparisonResult[] handleLoaderThreadBatch(String threadName, DataComparisonResult[] dc, int batchCommitSize) throws InterruptedException {
+        if (q != null && q.size() >= QUEUE_WAIT_THRESHOLD) {
             LoggingUtils.write("info", threadName, String.format("(%s) Waiting for Queue space", targetType));
             while (q.size() > QUEUE_WAIT_TARGET) {
                 Thread.sleep(QUEUE_WAIT_SLEEP_MS);
@@ -267,8 +273,7 @@ public class DataComparisonThread extends Thread {
         if (q != null) {
             q.put(dc);
         }
-        dc = null;
-        dc = new DataComparisonResult[batchCommitSize];
+        return new DataComparisonResult[batchCommitSize];
     }
     
     /**
