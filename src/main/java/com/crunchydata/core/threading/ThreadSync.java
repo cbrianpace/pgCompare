@@ -16,6 +16,8 @@
 
 package com.crunchydata.core.threading;
 
+import com.crunchydata.config.ApplicationState;
+
 /**
  * Utility class for thread synchronization.
  *
@@ -53,6 +55,22 @@ public class ThreadSync {
     public volatile int loaderThreadComplete = 0;
 
     /**
+     * Monotonic counter incremented on every observerNotify(). Used as a wait
+     * predicate so a notify that arrives before observerWait() is entered is not
+     * lost (classic missed-wakeup), and to ignore spurious wakeups.
+     */
+    private long notifyGeneration = 0;
+
+    /**
+     * Maximum time a producer will block in observerWait() before proceeding
+     * anyway. This is a safety net: the wait is only a throttle that lets the
+     * observer drain the staging tables, so proceeding early can never corrupt
+     * results - at worst the staging tables grow slightly larger. It guarantees
+     * a producer can never hang forever if the observer has already exited.
+     */
+    private static final long MAX_OBSERVER_WAIT_MS = 60000;
+
+    /**
      * Increase the number of threads complete.
      */
     public synchronized void incrementLoaderThreadComplete() {
@@ -60,28 +78,49 @@ public class ThreadSync {
     }
 
     /**
-     * Causes the current thread to wait until it is notified.
-     * This method must be called from a synchronized context.
+     * Causes the current thread to wait until it is notified by the observer.
+     *
+     * <p>Uses a generation counter as the wait predicate to avoid lost wakeups,
+     * and a bounded wait so a producer can never block indefinitely if the
+     * observer has already completed.</p>
      */
     public synchronized void observerWait() {
-            try {
-                wait();
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-                Thread.currentThread().interrupt(); // Restore interrupted status
+        long startGeneration = notifyGeneration;
+        long deadline = System.currentTimeMillis() + MAX_OBSERVER_WAIT_MS;
+
+        while (notifyGeneration == startGeneration) {
+            long remaining = deadline - System.currentTimeMillis();
+            if (remaining <= 0) {
+                // Timeout safety net - proceed without corrupting results.
+                return;
             }
+            try {
+                wait(remaining);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); // Restore interrupted status
+                return;
+            }
+        }
     }
 
     /**
-     * Wakes up all threads that are waiting on this object's monitor.
-     * This method must be called from a synchronized context.
+     * Advances the notify generation and wakes up all threads waiting on this
+     * object's monitor. Incrementing the generation before notifying ensures a
+     * producer that has not yet called observerWait() will observe the change
+     * and skip waiting rather than block on an already-delivered notification.
      */
     public synchronized void observerNotify() {
-        try {
-            notifyAll();
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-        }
+        notifyGeneration++;
+        notifyAll();
+    }
+
+    /**
+     * Check if a graceful shutdown has been requested.
+     *
+     * @return true if shutdown was requested via signal
+     */
+    public boolean isShutdownRequested() {
+        return ApplicationState.getInstance().isShutdownRequested();
     }
 
 }

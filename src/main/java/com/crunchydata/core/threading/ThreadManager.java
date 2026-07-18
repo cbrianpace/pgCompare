@@ -16,6 +16,7 @@
 
 package com.crunchydata.core.threading;
 
+import com.crunchydata.config.ApplicationState;
 import com.crunchydata.controller.RepoController;
 import com.crunchydata.model.ColumnMetadata;
 import com.crunchydata.model.DataComparisonTable;
@@ -46,10 +47,11 @@ public class ThreadManager {
     private static final String THREAD_NAME = "thread-manager";
     private static final int THREAD_SLEEP_MS = 2000;
     
-    // Thread collections
-    private static final List<DataComparisonThread> compareList = new ArrayList<>();
-    private static final List<DataLoaderThread> loaderList = new ArrayList<>();
-    private static final List<ObserverThread> observerList = new ArrayList<>();
+    // Thread collections (instance state so concurrent reconciliations do not
+    // share/clobber the same lists).
+    private final List<DataComparisonThread> compareList = new ArrayList<>();
+    private final List<DataLoaderThread> loaderList = new ArrayList<>();
+    private final List<ObserverThread> observerList = new ArrayList<>();
     
     /**
      * Execute reconciliation using coordinated thread management.
@@ -63,7 +65,7 @@ public class ThreadManager {
      * @param connRepo Repository connection
      * @throws InterruptedException if thread operations are interrupted
      */
-    public static void executeReconciliation(DataComparisonTable dct, Integer cid, DataComparisonTableMap dctmSource, DataComparisonTableMap dctmTarget,
+    public void executeReconciliation(DataComparisonTable dct, Integer cid, DataComparisonTableMap dctmSource, DataComparisonTableMap dctmTarget,
                                              ColumnMetadata ciSource, ColumnMetadata ciTarget, Connection connRepo)
                                            throws InterruptedException {
         
@@ -90,7 +92,7 @@ public class ThreadManager {
     /**
      * Clear all thread lists.
      */
-    private static void clearThreadLists() {
+    private void clearThreadLists() {
         compareList.clear();
         loaderList.clear();
         observerList.clear();
@@ -111,7 +113,7 @@ public class ThreadManager {
      * @param connRepo Repository connection
      * @throws InterruptedException if thread operations are interrupted
      */
-    private static void startReconcileThreads(DataComparisonTable dct, Integer cid, DataComparisonTableMap dctmSource, DataComparisonTableMap dctmTarget,
+    private void startReconcileThreads(DataComparisonTable dct, Integer cid, DataComparisonTableMap dctmSource, DataComparisonTableMap dctmTarget,
                                               ColumnMetadata ciSource, ColumnMetadata ciTarget,
                                               BlockingQueue<DataComparisonResult[]> qs, BlockingQueue<DataComparisonResult[]> qt,
                                               boolean useLoaderThreads, Connection connRepo)
@@ -173,7 +175,7 @@ public class ThreadManager {
      * @param stagingTarget Target staging table
      * @param ts Thread synchronization object
      */
-    private static void startLoaderThreads(int threadIndex, BlockingQueue<DataComparisonResult[]> qs, BlockingQueue<DataComparisonResult[]> qt,
+    private void startLoaderThreads(int threadIndex, BlockingQueue<DataComparisonResult[]> qs, BlockingQueue<DataComparisonResult[]> qt,
                                            String stagingSource, String stagingTarget, ThreadSync ts) {
         int loaderThreads = Integer.parseInt(Props.getProperty("loader-threads"));
         
@@ -194,12 +196,20 @@ public class ThreadManager {
      * 
      * @throws InterruptedException if thread operations are interrupted
      */
-    private static void waitForThreadCompletion() throws InterruptedException {
+    private void waitForThreadCompletion() throws InterruptedException {
         LoggingUtils.write("info", THREAD_NAME, "Waiting for compare threads to complete");
         joinThreads(compareList);
         
+        LoggingUtils.write("info", THREAD_NAME, "Waiting for loader threads to complete");
+        joinThreads(loaderList);
+        
         LoggingUtils.write("info", THREAD_NAME, "Waiting for reconcile threads to complete");
         joinThreads(observerList);
+        
+        if (ApplicationState.getInstance().isShutdownRequested()) {
+            LoggingUtils.write("info", THREAD_NAME, "Graceful shutdown completed");
+            ApplicationState.getInstance().markShutdownComplete();
+        }
         
         LoggingUtils.write("info", THREAD_NAME, "All reconciliation threads completed");
     }
@@ -210,7 +220,7 @@ public class ThreadManager {
      * @param threads List of threads to join
      * @throws InterruptedException if thread operations are interrupted
      */
-    private static void joinThreads(List<? extends Thread> threads) throws InterruptedException {
+    private void joinThreads(List<? extends Thread> threads) throws InterruptedException {
         for (Thread thread : threads) {
             if (thread != null && thread.isAlive()) {
                 thread.join();

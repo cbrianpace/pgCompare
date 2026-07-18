@@ -65,8 +65,9 @@ import java.util.Set;
 public class Settings {
 
     public static Properties Props;
-    public static final String VERSION = "0.5.0.0";
+    public static final String VERSION = "0.6.0.0";
     private static final String paramFile = (System.getenv("PGCOMPARE_CONFIG") == null) ? "pgcompare.properties" : System.getenv("PGCOMPARE_CONFIG");
+    private static final Object reloadLock = new Object();
 
     public static Map<String, Set<String>> validPropertyValues = Map.of(
             "column-hash-method", Set.of("database", "hybrid", "raw"),
@@ -187,7 +188,12 @@ public class Settings {
      */
     public static void setProjectConfig (Connection conn, Integer pid) {
 
-        JSONObject projectConfig = new JSONObject(RepoController.getProjectConfig(conn, pid));
+        String configString = RepoController.getProjectConfig(conn, pid);
+        if (configString == null || configString.isEmpty()) {
+            return;
+        }
+
+        JSONObject projectConfig = new JSONObject(configString);
 
         if ( ! projectConfig.isEmpty() ) {
 
@@ -202,6 +208,95 @@ public class Settings {
             }
         }
 
+    }
+
+
+    /**
+     * Reloads properties from the configuration file.
+     * This method is called in response to a SIGHUP signal.
+     * Thread-safe: uses synchronization to prevent concurrent reloads.
+     *
+     * Note: Only certain properties can be dynamically changed:
+     * - batch-fetch-size, batch-commit-size, batch-progress-report-size
+     * - loader-threads, message-queue-size
+     * - observer-throttle, observer-throttle-size, observer-vacuum
+     * - log-level
+     *
+     * Connection properties (repo-*, source-*, target-*) are NOT reloaded
+     * as changing them mid-execution would cause issues.
+     */
+    public static void reloadProperties() {
+        synchronized (reloadLock) {
+            LoggingUtils.write("info", "Settings", "Reloading configuration from " + paramFile);
+
+            if (!FileSystemUtils.FileExistsCheck(paramFile)) {
+                LoggingUtils.write("warning", "Settings", "Configuration file not found: " + paramFile);
+                return;
+            }
+
+            Properties newProps = setDefaults();
+
+            try (InputStream stream = new FileInputStream(paramFile)) {
+                newProps.load(stream);
+            } catch (Exception e) {
+                LoggingUtils.write("severe", "Settings", "Failed to reload configuration: " + e.getMessage());
+                return;
+            }
+
+            for (Object key : newProps.keySet()) {
+                Object value = newProps.get(key);
+                if (value instanceof String) {
+                    newProps.setProperty((String) key, ((String) value).trim());
+                }
+            }
+
+            Properties finalProps = setEnvironment(newProps);
+
+            updateDynamicProperties(finalProps);
+
+            LoggingUtils.write("info", "Settings", "Configuration reload complete");
+        }
+    }
+
+    /**
+     * Updates only the dynamic properties that can be safely changed at runtime.
+     *
+     * @param newProps the newly loaded properties
+     */
+    private static void updateDynamicProperties(Properties newProps) {
+        String[] dynamicProps = {
+            "batch-fetch-size",
+            "batch-commit-size",
+            "batch-progress-report-size",
+            "loader-threads",
+            "message-queue-size",
+            "observer-throttle",
+            "observer-throttle-size",
+            "observer-vacuum",
+            "log-level",
+            "float-scale",
+            "database-sort"
+        };
+
+        for (String prop : dynamicProps) {
+            String oldValue = Props.getProperty(prop);
+            String newValue = newProps.getProperty(prop);
+
+            if (newValue != null && !newValue.equals(oldValue)) {
+                Props.setProperty(prop, newValue);
+                LoggingUtils.write("info", "Settings", 
+                    String.format("Property '%s' changed: %s -> %s", prop, oldValue, newValue));
+            }
+        }
+    }
+
+    /**
+     * Gets the current configuration file path.
+     *
+     * @return the path to the configuration file
+     */
+    public static String getConfigFilePath() {
+        return paramFile;
     }
 
 

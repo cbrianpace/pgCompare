@@ -8,9 +8,18 @@ A Next.js-based web application for viewing and editing pgCompare configuration 
 - **Project Management**: View and edit project configurations in a user-friendly table format
 - **Results Visualization**: Charts and graphs showing comparison results and trends
 - **Table Configuration**: Edit table settings, mappings, and column configurations
-- **Navigation Tree**: Intuitive sidebar navigation for projects and tables
+- **Navigation Tree**: Intuitive sidebar navigation for projects and tables with search/filter
 - **Dark/Light Mode**: Toggle between dark and light themes, with preference saved locally
 - **Responsive Design**: Modern, responsive UI built with Tailwind CSS
+
+### Server Mode Features (v0.6.0)
+
+- **Dashboard Overview**: Real-time server status monitoring with heartbeat tracking
+- **Job Scheduling**: Schedule compare, check, or discover jobs from the UI
+- **Job Management**: View running, pending, and completed jobs
+- **Job Control**: Pause, resume, stop, or terminate running jobs
+- **Progress Tracking**: Real-time per-table progress monitoring
+- **Job Logs**: View job execution logs directly in the UI
 
 ## Prerequisites
 

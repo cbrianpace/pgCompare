@@ -40,7 +40,8 @@ CREATE TABLE dc_source (
 	pk_hash varchar(100) NULL,
 	column_hash varchar(100) NULL,
 	compare_result bpchar(1) NULL,
-	thread_nbr int4 NULL
+	thread_nbr int4 NULL,
+	fix_sql text NULL
 );
 
 -- DROP TABLE dc_table;
@@ -122,7 +123,95 @@ CREATE TABLE dc_target (
 	pk_hash varchar(100) NULL,
 	column_hash varchar(100) NULL,
 	compare_result bpchar(1) NULL,
-	thread_nbr int4 NULL
+	thread_nbr int4 NULL,
+	fix_sql text NULL
+);
+
+
+-- DROP TABLE dc_server;
+
+CREATE TABLE dc_server (
+	server_id uuid DEFAULT gen_random_uuid() NOT NULL,
+	server_name text NOT NULL,
+	server_host text NOT NULL,
+	server_pid int8 NOT NULL,
+	status varchar(20) DEFAULT 'active' NOT NULL,
+	registered_at timestamptz DEFAULT current_timestamp NOT NULL,
+	last_heartbeat timestamptz DEFAULT current_timestamp NOT NULL,
+	current_job_id uuid NULL,
+	server_config jsonb NULL,
+	CONSTRAINT dc_server_pk PRIMARY KEY (server_id),
+	CONSTRAINT dc_server_status_check CHECK (status IN ('active', 'idle', 'busy', 'offline', 'terminated'))
+);
+
+-- DROP TABLE dc_job;
+
+CREATE TABLE dc_job (
+	job_id uuid DEFAULT gen_random_uuid() NOT NULL,
+	pid int8 NOT NULL,
+	rid int8 NULL,
+	job_type varchar(20) DEFAULT 'compare' NOT NULL,
+	status varchar(20) DEFAULT 'pending' NOT NULL,
+	priority int4 DEFAULT 5 NOT NULL,
+	batch_nbr int4 DEFAULT 0 NOT NULL,
+	table_filter text NULL,
+	target_server_id uuid NULL,
+	assigned_server_id uuid NULL,
+	created_at timestamptz DEFAULT current_timestamp NOT NULL,
+	scheduled_at timestamptz NULL,
+	started_at timestamptz NULL,
+	completed_at timestamptz NULL,
+	created_by text NULL,
+	job_config jsonb NULL,
+	result_summary jsonb NULL,
+	error_message text NULL,
+	source varchar(20) DEFAULT 'server' NOT NULL,
+	CONSTRAINT dc_job_pk PRIMARY KEY (job_id),
+	CONSTRAINT dc_job_type_check CHECK (job_type IN ('compare', 'check', 'discover', 'test-connection')),
+	CONSTRAINT dc_job_status_check CHECK (status IN ('pending', 'scheduled', 'running', 'paused', 'completed', 'error', 'failed', 'cancelled')),
+	CONSTRAINT dc_job_priority_check CHECK (priority BETWEEN 1 AND 10),
+	CONSTRAINT dc_job_source_check CHECK (source IN ('server', 'standalone', 'api'))
+);
+
+-- DROP TABLE dc_job_control;
+
+CREATE TABLE dc_job_control (
+	control_id serial NOT NULL,
+	job_id uuid NOT NULL,
+	signal varchar(20) NOT NULL,
+	requested_at timestamptz DEFAULT current_timestamp NOT NULL,
+	processed_at timestamptz NULL,
+	requested_by text NULL,
+	CONSTRAINT dc_job_control_pk PRIMARY KEY (control_id),
+	CONSTRAINT dc_job_control_signal_check CHECK (signal IN ('pause', 'resume', 'stop', 'terminate'))
+);
+
+-- DROP TABLE dc_job_progress;
+
+CREATE TABLE dc_job_progress (
+	job_id uuid NOT NULL,
+	tid int8 NOT NULL,
+	table_name text NOT NULL,
+	status varchar(20) DEFAULT 'pending' NOT NULL,
+	started_at timestamptz NULL,
+	completed_at timestamptz NULL,
+	error_message text NULL,
+	cid int4 NULL,
+	CONSTRAINT dc_job_progress_pk PRIMARY KEY (job_id, tid),
+	CONSTRAINT dc_job_progress_status_check CHECK (status IN ('pending', 'running', 'completed', 'failed', 'skipped'))
+);
+
+-- DROP TABLE dc_job_log;
+
+CREATE TABLE dc_job_log (
+	log_id serial NOT NULL,
+	job_id uuid NOT NULL,
+	log_ts timestamptz DEFAULT current_timestamp NOT NULL,
+	log_level varchar(10) NOT NULL,
+	thread_name varchar(50) NULL,
+	message text NOT NULL,
+	context jsonb NULL,
+	CONSTRAINT dc_job_log_pk PRIMARY KEY (log_id)
 );
 
 
@@ -134,6 +223,10 @@ CREATE INDEX dc_result_idx1 ON dc_result USING btree (table_name, compare_start)
 CREATE INDEX dc_table_history_idx1 ON dc_table_history USING btree (tid, start_dt);
 CREATE INDEX dc_table_idx1 ON dc_table USING btree (table_alias);
 CREATE INDEX dc_table_column_idx1 ON dc_table_column USING btree (column_alias, tid, column_id);
+CREATE INDEX dc_server_idx1 ON dc_server USING btree (status, last_heartbeat);
+CREATE INDEX dc_job_idx1 ON dc_job USING btree (status, priority DESC, created_at);
+CREATE INDEX dc_job_idx2 ON dc_job USING btree (pid, status);
+CREATE INDEX dc_job_log_idx1 ON dc_job_log USING btree (job_id, log_ts);
 
 --
 -- Foreign Keys
@@ -141,6 +234,10 @@ CREATE INDEX dc_table_column_idx1 ON dc_table_column USING btree (column_alias, 
 ALTER TABLE dc_table_column ADD CONSTRAINT dc_table_column_fk FOREIGN KEY (tid) REFERENCES dc_table(tid) ON DELETE CASCADE;
 ALTER TABLE dc_table_column_map ADD CONSTRAINT dc_table_column_map_fk FOREIGN KEY (column_id) REFERENCES dc_table_column(column_id) ON DELETE CASCADE;
 ALTER TABLE dc_table_map ADD CONSTRAINT dc_table_map_fk FOREIGN KEY (tid) REFERENCES dc_table(tid) ON DELETE CASCADE;
+ALTER TABLE dc_job ADD CONSTRAINT dc_job_fk1 FOREIGN KEY (pid) REFERENCES dc_project(pid) ON DELETE CASCADE;
+ALTER TABLE dc_job_control ADD CONSTRAINT dc_job_control_fk1 FOREIGN KEY (job_id) REFERENCES dc_job(job_id) ON DELETE CASCADE;
+ALTER TABLE dc_job_progress ADD CONSTRAINT dc_job_progress_fk1 FOREIGN KEY (job_id) REFERENCES dc_job(job_id) ON DELETE CASCADE;
+ALTER TABLE dc_job_log ADD CONSTRAINT dc_job_log_fk1 FOREIGN KEY (job_id) REFERENCES dc_job(job_id) ON DELETE CASCADE;
 
 --
 -- Data

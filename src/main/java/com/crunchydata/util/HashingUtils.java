@@ -17,6 +17,7 @@
 
 package com.crunchydata.util;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -58,8 +59,10 @@ public class HashingUtils {
             MessageDigest md = MessageDigest.getInstance(MD5_ALGORITHM);
 
             // digest() method is called to calculate message digest
-            // of an input digest() return array of byte
-            byte[] messageDigest = md.digest(input.getBytes());
+            // of an input digest() return array of byte.
+            // Use an explicit UTF-8 charset so hashes are deterministic across
+            // hosts regardless of the platform default charset.
+            byte[] messageDigest = md.digest(input.getBytes(StandardCharsets.UTF_8));
 
             // Convert byte array into signum representation
             BigInteger no = new BigInteger(1, messageDigest);

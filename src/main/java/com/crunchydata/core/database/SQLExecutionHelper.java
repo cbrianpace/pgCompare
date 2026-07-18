@@ -411,22 +411,19 @@ public class SQLExecutionHelper {
             crs = RowSetProvider.newFactory().createCachedRowSet();
 
             // Prepare the PreparedStatement with the provided SQL query
-            PreparedStatement stmt = conn.prepareStatement(sql);
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setFetchSize(2000);
 
-            stmt.setFetchSize(2000);
+                // Bind parameters to the PreparedStatement
+                for (int counter = 0; counter < binds.size(); counter++) {
+                    stmt.setObject(counter + 1, binds.get(counter));
+                }
 
-            // Bind parameters to the PreparedStatement
-            for (int counter = 0; counter < binds.size(); counter++) {
-                stmt.setObject(counter+1, binds.get(counter));
+                // Execute the query and populate the ResultSet
+                try (ResultSet rs = stmt.executeQuery()) {
+                    crs.populate(rs);
+                }
             }
-
-            // Execute the query and populate the ResultSet
-            ResultSet rs = stmt.executeQuery();
-            crs.populate(rs);
-
-            // Close the ResultSet and PreparedStatement
-            rs.close();
-            stmt.close();
             conn.commit();
 
         } catch (Exception e) {
@@ -456,25 +453,18 @@ public class SQLExecutionHelper {
     public static Integer simpleUpdateReturningInteger(Connection conn, String sql, ArrayList<Object> binds) {
         Integer returnValue = null;
 
-        try {
-            // Prepare the PreparedStatement with the provided SQL query
-            PreparedStatement stmt = conn.prepareStatement(sql);
-
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             // Bind parameters to the PreparedStatement
             for (int counter = 0; counter < binds.size(); counter++) {
-                stmt.setObject(counter+1, binds.get(counter));
+                stmt.setObject(counter + 1, binds.get(counter));
             }
 
-            // Execute the query and populate the ResultSet
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                returnValue = rs.getInt(1);
+            // Execute the query and read the single Integer value
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    returnValue = rs.getInt(1);
+                }
             }
-
-            // Close the ResultSet and PreparedStatement
-            rs.close();
-            stmt.close();
             conn.commit();
 
         } catch (Exception e) {
@@ -501,16 +491,9 @@ public class SQLExecutionHelper {
      * @param sql The SQL query to execute, with placeholders for parameters.
      */
     public static void simpleExecute(Connection conn, String sql) {
-        try {
-
-            // Prepare the PreparedStatement with the provided SQL query
-            PreparedStatement stmt = conn.prepareStatement(sql);
-
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             // Execute the query
             stmt.execute();
-
-            // Close the PreparedStatement
-            stmt.close();
 
             if ( ! conn.getAutoCommit() ) {
                 conn.commit();

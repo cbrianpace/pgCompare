@@ -23,6 +23,7 @@ import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.concurrent.BlockingQueue;
 
+import com.crunchydata.config.ApplicationState;
 import com.crunchydata.controller.RepoController;
 import com.crunchydata.model.ColumnMetadata;
 import com.crunchydata.model.DataComparisonTable;
@@ -122,6 +123,8 @@ public class DataComparisonThread extends Thread {
             //conn.setAutoCommit(false);
             stmt = conn.prepareStatement(sql);
             stmt.setFetchSize(fetchSize);
+            
+            ApplicationState.getInstance().registerStatement(stmt);
             rs = stmt.executeQuery();
 
             StringBuilder columnValue = new StringBuilder();
@@ -135,6 +138,15 @@ public class DataComparisonThread extends Thread {
             DataComparisonResult[] dc = new DataComparisonResult[batchCommitSize];
 
             while (rs.next()) {
+                if (ApplicationState.getInstance().isImmediateTerminationRequested()) {
+                    LoggingUtils.write("info", threadName, String.format("(%s) Immediate termination requested - stopping now", targetType));
+                    break;
+                }
+                if (ts.isShutdownRequested()) {
+                    LoggingUtils.write("info", threadName, String.format("(%s) Shutdown requested - stopping gracefully", targetType));
+                    break;
+                }
+
                 columnValue.setLength(0);
 
                 if (! useDatabaseHash) {
@@ -164,7 +176,7 @@ public class DataComparisonThread extends Thread {
 
                 if (totalRows % batchCommitSize == 0) {
                     if (useLoaderThreads) {
-                        handleLoaderThreadBatch(threadName, dc, batchCommitSize);
+                        dc = handleLoaderThreadBatch(threadName, dc, batchCommitSize);
                     } else {
                         handleDirectDatabaseBatch(stmtLoad, connRepo);
                     }
@@ -244,9 +256,15 @@ public class DataComparisonThread extends Thread {
     
     /**
      * Handles batch processing for loader threads.
+     *
+     * <p>The provided array is handed off to the loader thread via the queue. A new
+     * array is returned so the caller stops mutating the array now owned by the
+     * loader thread (which would otherwise cause a data race and corrupt findings).</p>
+     *
+     * @return a fresh array for the caller to continue filling
      */
-    private void handleLoaderThreadBatch(String threadName, DataComparisonResult[] dc, int batchCommitSize) throws InterruptedException {
-        if (q != null && q.size() == QUEUE_WAIT_THRESHOLD) {
+    private DataComparisonResult[] handleLoaderThreadBatch(String threadName, DataComparisonResult[] dc, int batchCommitSize) throws InterruptedException {
+        if (q != null && q.size() >= QUEUE_WAIT_THRESHOLD) {
             LoggingUtils.write("info", threadName, String.format("(%s) Waiting for Queue space", targetType));
             while (q.size() > QUEUE_WAIT_TARGET) {
                 Thread.sleep(QUEUE_WAIT_SLEEP_MS);
@@ -255,8 +273,7 @@ public class DataComparisonThread extends Thread {
         if (q != null) {
             q.put(dc);
         }
-        dc = null;
-        dc = new DataComparisonResult[batchCommitSize];
+        return new DataComparisonResult[batchCommitSize];
     }
     
     /**
@@ -350,6 +367,8 @@ public class DataComparisonThread extends Thread {
      */
     private void cleanupResources(String threadName, ResultSet rs, PreparedStatement stmt, 
                                 PreparedStatement stmtLoad, Connection connRepo, Connection conn) {
+        ApplicationState.getInstance().unregisterStatement(stmt);
+        
         try {
             if (rs != null) {
                 rs.close();

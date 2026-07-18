@@ -31,7 +31,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { project_name } = body;
+    const { project_name, project_config } = body;
 
     if (!project_name) {
       return NextResponse.json({ error: 'Project name is required' }, { status: 400 });
@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
     const newProject = await prisma.dc_project.create({
       data: {
         project_name,
+        ...(project_config && { project_config }),
       },
       select: {
         pid: true,

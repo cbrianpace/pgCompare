@@ -14,75 +14,122 @@
 # Pull base image
 # ---------------
 ARG MAVEN_VERSION=3.9.9
+ARG NODE_VERSION=22
 ARG BASE_REGISTRY=registry.access.redhat.com/ubi8
 ARG BASE_IMAGE=ubi-minimal
 ARG JAVA_OPT="-XX:UseSVE=0"
 
-FROM docker.io/library/maven:${MAVEN_VERSION} AS builder
+#############################################
+# Stage 1: Build Java Application
+#############################################
+FROM docker.io/library/maven:${MAVEN_VERSION} AS java-builder
 LABEL stage=pgcomparebuilder
-ARG JAVA_OPT
-
-ENV _JAVA_OPTIONS=${JAVA_OPT}
 
 WORKDIR /app
-COPY . ./
+COPY pom.xml ./
+COPY src ./src
 
-RUN mvn clean install
+RUN mvn clean install -DskipTests
 
+#############################################
+# Stage 2: Build Next.js UI
+#############################################
+FROM docker.io/library/node:${NODE_VERSION}-alpine AS ui-builder
 
-FROM ${BASE_REGISTRY}/${BASE_IMAGE} as multi-stage
+WORKDIR /app/ui
+COPY ui/package*.json ./
+RUN npm ci
+
+COPY ui/ ./
+RUN npm run build
+
+#############################################
+# Stage 3: Multi-stage Production Image
+#############################################
+FROM ${BASE_REGISTRY}/${BASE_IMAGE} AS multi-stage
 ARG JAVA_OPT
+ARG NODE_VERSION
+ARG TARGETARCH
 
-RUN microdnf install java-21-openjdk -y
+RUN microdnf install java-21-openjdk tar xz -y && microdnf clean all
+
+RUN NODE_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "x64") && \
+    curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}.9.0/node-v${NODE_VERSION}.9.0-linux-${NODE_ARCH}.tar.xz | tar -xJ -C /usr/local --strip-components=1
 
 USER 0
 
-RUN mkdir /opt/pgcompare \
+RUN mkdir -p /opt/pgcompare/ui /opt/pgcompare/lib \
     && chown -R 1001:1001 /opt/pgcompare
 
-COPY --from=builder /app/docker/start.sh /opt/pgcompare
+COPY docker/start.sh /opt/pgcompare/
+COPY docker/pgcompare.properties /etc/pgcompare/
+COPY --from=java-builder /app/target/*.jar /opt/pgcompare/
+COPY --from=java-builder /app/target/lib/ /opt/pgcompare/lib/
 
-COPY --from=builder /app/docker/pgcompare.properties /etc/pgcompare/
+COPY --from=ui-builder /app/ui/.next/standalone/ /opt/pgcompare/ui/
+COPY --from=ui-builder /app/ui/.next/static /opt/pgcompare/ui/.next/static
+COPY --from=ui-builder /app/ui/public /opt/pgcompare/ui/public
 
-COPY --from=builder /app/target/* /opt/pgcompare/
-
-RUN chmod 770 /opt/pgcompare/start.sh
+RUN chmod 770 /opt/pgcompare/start.sh \
+    && chown -R 1001:1001 /opt/pgcompare
 
 USER 1001
 
 ENV PGCOMPARE_HOME=/opt/pgcompare \
     PGCOMPARE_CONFIG=/etc/pgcompare/pgcompare.properties \
+    PGCOMPARE_MODE=standard \
     PATH=/opt/pgcompare:$PATH \
-    _JAVA_OPTIONS=${JAVA_OPT}
+    _JAVA_OPTIONS=${JAVA_OPT} \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
+
+EXPOSE 3000
 
 CMD ["start.sh"]
 
 WORKDIR "/opt/pgcompare"
 
-## Local Platform Build
-FROM ${BASE_REGISTRY}/${BASE_IMAGE} as local
+#############################################
+# Stage 4: Local Platform Build
+#############################################
+FROM ${BASE_REGISTRY}/${BASE_IMAGE} AS local
+ARG JAVA_OPT
+ARG NODE_VERSION
+ARG TARGETARCH
 
-RUN microdnf install java-21-openjdk -y
+RUN microdnf install java-21-openjdk tar xz -y && microdnf clean all
+
+RUN NODE_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "x64") && \
+    curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}.9.0/node-v${NODE_VERSION}.9.0-linux-${NODE_ARCH}.tar.xz | tar -xJ -C /usr/local --strip-components=1
 
 USER 0
 
-RUN mkdir /opt/pgcompare \
+RUN mkdir -p /opt/pgcompare/ui /opt/pgcompare/lib \
     && chown -R 1001:1001 /opt/pgcompare
 
 COPY docker/start.sh /opt/pgcompare/
-
 COPY docker/pgcompare.properties /etc/pgcompare/
+COPY target/*.jar /opt/pgcompare/
+COPY target/lib/ /opt/pgcompare/lib/
 
-COPY target/* /opt/pgcompare/
+COPY ui/.next/standalone/ /opt/pgcompare/ui/
+COPY ui/.next/static /opt/pgcompare/ui/.next/static
+COPY ui/public /opt/pgcompare/ui/public
 
-RUN chmod 770 /opt/pgcompare/start.sh
+RUN chmod 770 /opt/pgcompare/start.sh \
+    && chown -R 1001:1001 /opt/pgcompare
 
 USER 1001
 
 ENV PGCOMPARE_HOME=/opt/pgcompare \
     PGCOMPARE_CONFIG=/etc/pgcompare/pgcompare.properties \
+    PGCOMPARE_MODE=standard \
     PATH=/opt/pgcompare:$PATH \
-    _JAVA_OPTIONS=${JAVA_OPT}
+    _JAVA_OPTIONS=${JAVA_OPT} \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
+
+EXPOSE 3000
 
 CMD ["start.sh"]
 

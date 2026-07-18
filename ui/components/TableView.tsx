@@ -6,6 +6,7 @@ import { Table } from '@/lib/types';
 import TableMapPanel from './TableMapPanel';
 import TableColumnPanel from './TableColumnPanel';
 import TableResultsPanel from './TableResultsPanel';
+import { toast } from '@/components/Toaster';
 
 interface TableViewProps {
   tableId: number;
@@ -53,10 +54,10 @@ export default function TableView({ tableId }: TableViewProps) {
         }),
       });
 
-      alert('Table settings saved successfully');
+      toast.success('Table settings saved successfully');
     } catch (error) {
       console.error('Failed to save table:', error);
-      alert('Failed to save table settings');
+      toast.error('Failed to save table settings');
     } finally {
       setSaving(false);
     }

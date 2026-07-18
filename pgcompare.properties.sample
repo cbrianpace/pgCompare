@@ -54,6 +54,11 @@ log-destination = stdout
 # default: INFO
 log-level = INFO
 
+# Enable logging to job log table for server mode and standalone runs
+# When enabled, log entries are stored in dc_job_log table for viewing in UI
+# default: false
+job-logging-enabled = false
+
 # Determines whether to presort the rows on the source or target database (append ORDER BY to SELECT statement).
 # default: true
 database-sort = true

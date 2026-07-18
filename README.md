@@ -19,7 +19,7 @@
 
 pgCompare uses hashing to compare table data efficiently. Hash values for primary keys and remaining columns are stored in a repository, reducing storage and network demands. Comparisons are processed in parallel, improving performance.
 
-This open-source project is maintained by **Crunchy Data** under the **Apache 2.0 License** and is made available for broader use, testing, and feedback.
+This open-source project is maintained under the **Apache 2.0 License** and is made available for broader use, testing, and feedback.
 
 # Features
 
@@ -51,6 +51,8 @@ Before initiating the build and installation process, ensure the following prere
 
 # Getting Started
 
+> **Note:** The `main` branch contains active development and may be unstable. For production use, we recommend checking out a stable release tag (e.g., `git checkout v0.6.0`). See [Releases](https://github.com/CrunchyData/pgCompare/releases) for available versions.
+
 ## 1. Fork the repository
 
 ## 2. Clone and Build
@@ -58,6 +60,7 @@ Before initiating the build and installation process, ensure the following prere
 ```shell
 git clone --depth 1 git@github.com:<your-github-username>/pgCompare.git
 cd pgCompare
+git checkout v0.6.0  # Optional: checkout a stable release
 mvn clean install
 ```
 
@@ -67,6 +70,15 @@ Copy `pgcompare.properties.sample` to `pgcompare.properties` and update the conn
 By default, the application looks for the properties file in the execution directory. Use `PGCOMPARE_CONFIG` environment variable to specify a custom properties file location.
 
 At a minimal the `repo-xxxxx` parameters are required in the properties file (or specified by environment parameters).  Besides the properties file and environment variables, another alternative is to store the property settings in the `dc_project` table.  Settings can be stored in the `project_config` column in JSON format ({"parameter": "value"}).  Certain system parameters like log-destination can only be specified via the properties file or environment variables.
+
+You can also import/export configuration using the CLI:
+```shell
+# Export project configuration to properties file
+java -jar pgcompare.jar export-config -p 1 --file project-config.properties
+
+# Import properties file to project configuration  
+java -jar pgcompare.jar import-config -p 1 --file my-config.properties
+```
 
 ## 4. Initialize Repository
 
@@ -96,18 +108,30 @@ Actions:
 - **check**:  Recompare the out of sync rows from previous compare
 - **compare**:  Perform database compare
 - **copy-table**: Copy pgCompare metadata for table.  Must specify table alias to copy using --table option
-- **discover**:  Disocver tables and columns
+- **discover**:  Discover tables and columns
+- **export-config**: Export project configuration to properties file
+- **export-mapping**: Export table/column mappings to YAML file
+- **import-config**: Import properties file to project configuration
+- **import-mapping**: Import table/column mappings from YAML file
 - **init**: Initialize the repository database
+- **server**: Run in server mode (daemon that polls work queue for jobs)
+- **test-connection**: Test database connections and report status
 
 Options:
 
    -b|--batch {batch nbr}
 
+   -o|--file {path} File for export/import operations
+
+   --overwrite Overwrite existing mappings during import
+
    -p|--project Project ID
 
    -r|--report {file} Create html report of compare
 
-   -t|--table {target table}
+   -t|--table {target table} (supports wildcards for export/import)
+
+   -n|--name {server name} Server name for server mode (default: pgcompare-server)
 
    --help
 
@@ -143,7 +167,19 @@ java -jar pgcompare.jar check --batch 0
 
 # Upgrading
 
-## Version 0.5.0 Enhacements
+## Version 0.6.0 Enhancements
+
+- **Server Mode** - Run pgCompare as a daemon that polls a work queue for jobs
+- **Web UI Enhancements** - Job scheduling, real-time progress tracking, job control (pause/resume/stop)
+- **Signal Handling** - Graceful shutdown (SIGINT), immediate termination (SIGTERM), config reload (SIGHUP)
+- **Fix SQL Improvements** - Enhanced data type handling, proper column mapping for UPDATE statements
+- **Database Schema** - New tables for server mode (dc_server, dc_job, dc_job_control, dc_job_progress, dc_job_log)
+
+**Note:** Drop and recreate the repository to upgrade to 0.6.0.
+
+For more details review the [v0.6.0 Release Notes](docs/RELEASE_NOTES_v0.6.0.md)
+
+## Version 0.5.0 Enhancements
 
 - Snowflake Support - Full integration for Snowflake as source/target
 - SQL Fix Generation - Automatic generation of INSERT/UPDATE/DELETE statements (Preview, limited ability)
@@ -153,7 +189,7 @@ java -jar pgcompare.jar check --batch 0
 
 **Note:** Drop and recreate the repository to upgrade to 0.5.0.
 
-For more details review the [v0.5.0 Release Noes](RELEASE_NOTES_v0.5.0.md)
+For more details review the [v0.5.0 Release Notes](docs/RELEASE_NOTES_v0.5.0.md)
 
 ## Version 0.4.0 Enhancements
 
@@ -200,6 +236,8 @@ Examples:
 ## Projects
 
 Projects allow for the repository to maintain different mappings for different compare objectives.  This allows a central pgCompare repository to be used for multiple compare projects.  Each table has a `pid` column which is the project id.  If no project is specified, the default project (pid = 1) is used.
+
+> **Note:** Project 1 (pid=1) is reserved as the default project and is created automatically during repository initialization. Do not delete or reassign this project.
 
 # Viewing Results
 
@@ -271,6 +309,12 @@ Properties are categorized into four sections: system, repository, source, and t
   Set the preferred scale used to cast low precision numbers.
 
   Default: 3
+
+#### job-logging-enabled
+
+  When set to true, log messages are written to the `dc_job_log` table in addition to the standard log destination. This enables viewing job logs through the pgCompare UI. The job must have an associated job ID (either from server mode or standalone job tracking).
+
+  Default: false
 
 #### loader-threads
 

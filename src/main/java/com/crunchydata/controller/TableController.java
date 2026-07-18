@@ -20,6 +20,7 @@ import com.crunchydata.config.ApplicationContext;
 import com.crunchydata.core.database.SQLExecutionHelper;
 import com.crunchydata.model.DataComparisonTable;
 import com.crunchydata.model.DataComparisonTableMap;
+import com.crunchydata.service.StandaloneJobService;
 import com.crunchydata.util.LoggingUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -115,9 +116,34 @@ public class TableController {
      * @throws SQLException if database operations fail
      */
     public static ComparisonResults reconcileTables(CachedRowSet tablesResultSet, boolean isCheck, RepoController repoController, ApplicationContext context) throws SQLException {
+        return reconcileTables(tablesResultSet, isCheck, repoController, context, null);
+    }
+    
+    /**
+     * Process all tables in the result set with optional job progress tracking.
+     * 
+     * @param tablesResultSet Result set containing tables to process
+     * @param isCheck Whether this is a recheck operation
+     * @param repoController Repository controller instance
+     * @param context Application context
+     * @param jobService Optional job service for progress tracking (can be null)
+     * @return ComparisonResults containing processed tables and results
+     * @throws SQLException if database operations fail
+     */
+    public static ComparisonResults reconcileTables(CachedRowSet tablesResultSet, boolean isCheck, RepoController repoController, ApplicationContext context, StandaloneJobService jobService) throws SQLException {
 
         JSONArray runResults = new JSONArray();
         int tablesProcessed = 0;
+        
+        // Pre-populate progress for all tables if job service is available
+        if (jobService != null) {
+            while (tablesResultSet.next()) {
+                long tid = tablesResultSet.getLong("tid");
+                String tableAlias = tablesResultSet.getString("table_alias");
+                jobService.initializeTableProgress(tid, tableAlias);
+            }
+            tablesResultSet.beforeFirst();
+        }
         
         while (tablesResultSet.next()) {
             tablesProcessed++;
@@ -127,10 +153,32 @@ public class TableController {
 
             JSONObject actionResult;
 
+            // Mark table as running
+            if (jobService != null) {
+                jobService.updateTableProgress(table.getTid(), "running", null, null);
+            }
+
             if (table.getEnabled()) {
                 actionResult = reconcileEnabledTable(table, isCheck, repoController, context);
             } else {
                 actionResult = createSkippedTableResult(table);
+            }
+            
+            // Update table progress based on result
+            if (jobService != null) {
+                String status = "completed";
+                String errorMessage = null;
+                Integer cid = actionResult.optInt("cid", 0);
+                
+                String compareStatus = actionResult.optString("compareStatus", "");
+                if (STATUS_FAILED.equals(compareStatus) || STATUS_ERROR.equals(actionResult.optString("status"))) {
+                    status = "failed";
+                    errorMessage = actionResult.optString("error", null);
+                } else if (STATUS_SKIPPED.equals(actionResult.optString("status")) || STATUS_DISABLED.equals(compareStatus)) {
+                    status = "skipped";
+                }
+                
+                jobService.updateTableProgress(table.getTid(), status, errorMessage, cid > 0 ? cid : null);
             }
 
             runResults.put(actionResult);

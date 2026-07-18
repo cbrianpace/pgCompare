@@ -71,7 +71,8 @@ public interface RepoSQLConstants {
                 pk_hash varchar(100) NULL,
                 column_hash varchar(100) NULL,
                 compare_result bpchar(1) NULL,
-                thread_nbr int4 NULL
+                thread_nbr int4 NULL,
+                fix_sql text NULL
             )
             """;
 
@@ -184,7 +185,8 @@ public interface RepoSQLConstants {
             	pk_hash varchar(100) NULL,
             	column_hash varchar(100) NULL,
             	compare_result bpchar(1) NULL,
-            	thread_nbr int4 NULL
+            	thread_nbr int4 NULL,
+            	fix_sql text NULL
             )
             """;
 
@@ -300,19 +302,19 @@ public interface RepoSQLConstants {
                                 """;
 
     String SQL_REPO_SELECT_OUTOFSYNC_ROWS = """
-                        SELECT DISTINCT tid, pk_hash, pk
+                        SELECT DISTINCT ON (pk_hash) tid, pk_hash, pk
                         FROM (SELECT tid, pk_hash, pk
                             FROM dc_source
                             WHERE tid = ?
                                   AND compare_result is not null
                                   AND compare_result != 'e'
-                            UNION
+                            UNION ALL
                             SELECT tid, pk_hash, pk
                             FROM dc_target
                             WHERE tid = ?
                                   AND compare_result is not null
                                   AND compare_result != 'e') x
-                        ORDER BY tid
+                        ORDER BY pk_hash, tid
                        """;
 
 
@@ -333,7 +335,7 @@ public interface RepoSQLConstants {
     String SQL_REPO_DCRESULT_UPDATE_STATUSANDCOUNT = """
                                  UPDATE dc_result SET missing_source_cnt=?, missing_target_cnt=?, not_equal_cnt=?, status=?, compare_end=current_timestamp
                                  WHERE cid=?
-                                 RETURNING equal_cnt, missing_source_cnt, missing_target_cnt, not_equal_cnt, status
+                                 RETURNING equal_cnt, missing_source_cnt, missing_target_cnt, not_equal_cnt, status, source_cnt, target_cnt
                                  """;
 
     String SQL_REPO_DCRESULT_CLEAN = """
@@ -519,5 +521,28 @@ public interface RepoSQLConstants {
                   AND m.dest_type = ?
                   AND t.table_alias = ?
     """;
+
+    //
+    // Repository SQL - Fix SQL Updates
+    //
+    String SQL_REPO_DCSOURCE_UPDATE_FIXSQL = """
+            UPDATE dc_source SET fix_sql = ? WHERE tid = ? AND pk_hash = ?
+            """;
+
+    String SQL_REPO_DCTARGET_UPDATE_FIXSQL = """
+            UPDATE dc_target SET fix_sql = ? WHERE tid = ? AND pk_hash = ?
+            """;
+
+    String SQL_REPO_DCSOURCE_SELECT_FIXSQL_BYTID = """
+            SELECT tid, pk, pk_hash, compare_result, fix_sql
+            FROM dc_source
+            WHERE tid = ? AND fix_sql IS NOT NULL
+            """;
+
+    String SQL_REPO_DCTARGET_SELECT_FIXSQL_BYTID = """
+            SELECT tid, pk, pk_hash, compare_result, fix_sql
+            FROM dc_target
+            WHERE tid = ? AND fix_sql IS NOT NULL
+            """;
 
 }

@@ -93,13 +93,14 @@ public class RepoController {
         try {
             ArrayList<Object> binds = new ArrayList<>();
             binds.add(tid);
-            binds.add(batchNbr);
 
-            SQLExecutionHelper.simpleUpdate(conn, "DELETE FROM dc_source WHERE tid=? AND batch_nbr=?", binds, true);
-            SQLExecutionHelper.simpleUpdate(conn, "DELETE FROM dc_target WHERE tid=? AND batch_nbr=?", binds, true);
+            // Delete all rows for this tid (not filtered by batch_nbr) to ensure clean slate
+            // The MARK queries in ResultProcessor use tid only, so we must purge all data for tid
+            SQLExecutionHelper.simpleUpdate(conn, "DELETE FROM dc_source WHERE tid=?", binds, true);
+            SQLExecutionHelper.simpleUpdate(conn, "DELETE FROM dc_target WHERE tid=?", binds, true);
 
             LoggingUtils.write("info", THREAD_NAME,
-                    String.format("Data comparison results deleted for table %d, batch %d", tid, batchNbr));
+                    String.format("Data comparison results deleted for table %d", tid));
 
         } catch (Exception e) {
             LoggingUtils.write("severe", THREAD_NAME,
@@ -119,6 +120,21 @@ public class RepoController {
         ArrayList<Object> binds = new ArrayList<>();
         binds.add(pid);
         return SQLExecutionHelper.simpleSelectReturnString(conn, SQL_REPO_DCPROJECT_GETBYPID, binds);
+    }
+
+    /**
+     * Saves the project settings to dc_project table.
+     *
+     * @param conn        Database connection
+     * @param pid         Project ID
+     * @param configJson  JSON string containing project configuration
+     */
+    public static void saveProjectConfig(Connection conn, Integer pid, String configJson) {
+        ArrayList<Object> binds = new ArrayList<>();
+        binds.add(configJson);
+        binds.add(pid);
+        SQLExecutionHelper.simpleUpdate(conn, "UPDATE dc_project SET project_config = ?::jsonb WHERE pid = ?", binds, true);
+        LoggingUtils.write("info", THREAD_NAME, String.format("Project config saved for project %d", pid));
     }
 
     /**

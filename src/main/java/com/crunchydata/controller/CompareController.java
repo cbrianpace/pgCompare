@@ -24,6 +24,7 @@ import com.crunchydata.model.ColumnMetadata;
 import com.crunchydata.model.DataComparisonTable;
 import com.crunchydata.model.DataComparisonTableMap;
 import com.crunchydata.core.database.SQLExecutionHelper;
+import com.crunchydata.service.StandaloneJobService;
 import com.crunchydata.util.LoggingUtils;
 
 import javax.sql.rowset.CachedRowSet;
@@ -57,6 +58,16 @@ public class CompareController {
      * @param context Application context
      */
     public static void performCompare(ApplicationContext context) {
+        performCompare(context, null);
+    }
+    
+    /**
+     * Perform database comparison operation with optional job progress tracking.
+     *
+     * @param context Application context
+     * @param jobService Optional job service for progress tracking (can be null)
+     */
+    public static void performCompare(ApplicationContext context, StandaloneJobService jobService) {
         boolean isCheck = Props.getProperty("isCheck").equals("true");
         String tableFilter = context.getCmd().hasOption("table") ? context.getCmd().getOptionValue("table").toLowerCase() : "";
 
@@ -68,8 +79,8 @@ public class CompareController {
             RepoController repoController = new RepoController();
             CachedRowSet tablesResultSet = getTables(context.getPid(), context.getConnRepo(), context.getBatchParameter(), tableFilter, isCheck);
 
-            // Process tables and collect results
-            TableController.ComparisonResults results = TableController.reconcileTables(tablesResultSet, isCheck, repoController, context);
+            // Process tables and collect results (with optional progress tracking)
+            TableController.ComparisonResults results = TableController.reconcileTables(tablesResultSet, isCheck, repoController, context, jobService);
 
             // Close result set
             if (tablesResultSet != null) {
@@ -125,7 +136,7 @@ public class CompareController {
 
             ColumnMetadata ciTarget = getColumnInfo(columnMap, "target", Props.getProperty("target-type"),
                     dctmTarget.getSchemaName(), dctmTarget.getTableName(),
-                    !check && "database".equals(Props.getProperty("column-hash-method")));
+                    "database".equals(Props.getProperty("column-hash-method")));
 
             logColumnMetadata(ciSource, ciTarget);
 
@@ -234,7 +245,7 @@ public class CompareController {
         } else {
             try {
                 // Use ThreadManager for complex thread coordination
-                ThreadManager.executeReconciliation(dct, cid, dctmSource, dctmTarget, ciSource, ciTarget, connRepo);
+                new ThreadManager().executeReconciliation(dct, cid, dctmSource, dctmTarget, ciSource, ciTarget, connRepo);
             } catch (InterruptedException e) {
                 LoggingUtils.write("severe", THREAD_NAME, String.format("Thread execution interrupted: %s", e.getMessage()));
                 Thread.currentThread().interrupt();

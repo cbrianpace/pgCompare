@@ -93,15 +93,28 @@ public class ResultProcessor {
         binds.add(tid);
         binds.add(tid);
         
-        // Calculate missing source records
+        // Calculate missing source records (rows in target that don't exist in source)
         int missingSource = SQLExecutionHelper.simpleUpdate(connRepo, SQL_REPO_DCSOURCE_MARKMISSING, binds, true);
         
-        // Calculate missing target records
+        // Calculate missing target records (rows in source that don't exist in target)
         int missingTarget = SQLExecutionHelper.simpleUpdate(connRepo, SQL_REPO_DCTARGET_MARKMISSING, binds, true);
         
         // Calculate not equal records
         int notEqual = SQLExecutionHelper.simpleUpdate(connRepo, SQL_REPO_DCSOURCE_MARKNOTEQUAL, binds, true);
-        SQLExecutionHelper.simpleUpdate(connRepo, SQL_REPO_DCTARGET_MARKNOTEQUAL, binds, true);
+        int notEqualTarget = SQLExecutionHelper.simpleUpdate(connRepo, SQL_REPO_DCTARGET_MARKNOTEQUAL, binds, true);
+
+        // Fail loud: a negative count means the update errored. Silently accepting
+        // it would record incorrect reconciliation results, which is unacceptable
+        // for a data validation tool.
+        if (missingSource < 0 || missingTarget < 0 || notEqual < 0 || notEqualTarget < 0) {
+            throw new SQLException(String.format(
+                "Reconciliation statistics update failed for tid=%d (missingSource=%d, missingTarget=%d, notEqualSource=%d, notEqualTarget=%d)",
+                tid, missingSource, missingTarget, notEqual, notEqualTarget));
+        }
+
+        LoggingUtils.write("info", THREAD_NAME, 
+            String.format("Reconciliation stats for tid=%d: missingSource=%d, missingTarget=%d, notEqual=%d", 
+                tid, missingSource, missingTarget, notEqual));
         
         return new ReconciliationStats(missingSource, missingTarget, notEqual);
     }
@@ -118,7 +131,8 @@ public class ResultProcessor {
         result.put("notEqual", stats.notEqual());
         
         // Determine final status
-        if ("processing".equals(result.getString("compareStatus"))) {
+        String currentStatus = result.optString("compareStatus", "processing");
+        if ("processing".equals(currentStatus)) {
             boolean hasOutOfSyncRecords = stats.missingSource() + stats.missingTarget() + stats.notEqual() > 0;
             result.put("compareStatus", hasOutOfSyncRecords ? "out-of-sync" : "in-sync");
         }
@@ -141,11 +155,22 @@ public class ResultProcessor {
         binds.add(cid);
         
         try (var crs = SQLExecutionHelper.simpleUpdateReturning(connRepo, SQL_REPO_DCRESULT_UPDATE_STATUSANDCOUNT, binds)) {
-            if (crs.next()) {
-                int equal = crs.getInt(1);
-                result.put("equal", equal);
-                result.put("totalRows", equal + result.getInt("missingSource") + result.getInt("missingTarget") + result.getInt("notEqual"));
+            if (crs == null || !crs.next()) {
+                throw new SQLException(String.format(
+                    "Failed to update final reconciliation result for cid=%d (no row returned)", cid));
             }
+            int equal = crs.getInt(1);
+            int sourceCnt = crs.getInt(6);
+            int targetCnt = crs.getInt(7);
+            result.put("equal", equal);
+            result.put("sourceCount", sourceCnt);
+            result.put("targetCount", targetCnt);
+            result.put("totalRows", equal + result.getInt("missingSource") + result.getInt("missingTarget") + result.getInt("notEqual"));
+
+            LoggingUtils.write("info", THREAD_NAME,
+                String.format("Database results for cid=%d: equal=%d, sourceCount=%d, targetCount=%d, missingSource=%d, missingTarget=%d, notEqual=%d",
+                    cid, equal, sourceCnt, targetCnt,
+                    result.getInt("missingSource"), result.getInt("missingTarget"), result.getInt("notEqual")));
         }
     }
 
