@@ -245,7 +245,7 @@ public class CompareController {
         } else {
             try {
                 // Use ThreadManager for complex thread coordination
-                ThreadManager.executeReconciliation(dct, cid, dctmSource, dctmTarget, ciSource, ciTarget, connRepo);
+                new ThreadManager().executeReconciliation(dct, cid, dctmSource, dctmTarget, ciSource, ciTarget, connRepo);
             } catch (InterruptedException e) {
                 LoggingUtils.write("severe", THREAD_NAME, String.format("Thread execution interrupted: %s", e.getMessage()));
                 Thread.currentThread().interrupt();

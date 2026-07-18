@@ -282,7 +282,7 @@ public class JobAwareCompareController {
                     return result;
                 }
 
-                ThreadManager.executeReconciliation(dct, cid, dctmSource, dctmTarget, 
+                new ThreadManager().executeReconciliation(dct, cid, dctmSource, dctmTarget, 
                     ciSource, ciTarget, connRepo);
             }
 

@@ -19,7 +19,7 @@
 
 pgCompare uses hashing to compare table data efficiently. Hash values for primary keys and remaining columns are stored in a repository, reducing storage and network demands. Comparisons are processed in parallel, improving performance.
 
-This open-source project is maintained by **Crunchy Data** under the **Apache 2.0 License** and is made available for broader use, testing, and feedback.
+This open-source project is maintained under the **Apache 2.0 License** and is made available for broader use, testing, and feedback.
 
 # Features
 
@@ -177,7 +177,7 @@ java -jar pgcompare.jar check --batch 0
 
 **Note:** Drop and recreate the repository to upgrade to 0.6.0.
 
-For more details review the [v0.6.0 Release Notes](RELEASE_NOTES_v0.6.0.md)
+For more details review the [v0.6.0 Release Notes](docs/RELEASE_NOTES_v0.6.0.md)
 
 ## Version 0.5.0 Enhancements
 
@@ -189,7 +189,7 @@ For more details review the [v0.6.0 Release Notes](RELEASE_NOTES_v0.6.0.md)
 
 **Note:** Drop and recreate the repository to upgrade to 0.5.0.
 
-For more details review the [v0.5.0 Release Notes](RELEASE_NOTES_v0.5.0.md)
+For more details review the [v0.5.0 Release Notes](docs/RELEASE_NOTES_v0.5.0.md)
 
 ## Version 0.4.0 Enhancements
 
