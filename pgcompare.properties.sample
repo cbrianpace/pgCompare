@@ -82,7 +82,7 @@ repo-dbname=pgcompare
 repo-user=postgres
 
 # Database password for authentication.
-repo-password=welcome1
+repo-password=<repo-password>
 
 # Schema that owns the pgCompare database objects in the repository.
 # default: pgcompare
@@ -122,7 +122,7 @@ source-host=myorahost
 source-port=1521
 source-dbname=hr
 source-user=appuser
-source-password=welcome1
+source-password=<source-password>
 source-sslmode=disable
 source-schema=appuser
 source-schema=appuser
@@ -132,7 +132,7 @@ source-schema=appuser
 #source-port=5432
 #source-dbname=hr
 #source-user=postgres
-#source-password=welcome1
+#source-password=<source-password>
 #source-sslmode=disable
 #source-schema=appuser
 
@@ -145,7 +145,7 @@ target-host=mynewhost
 target-port=5432
 target-dbname=hr
 target-user=postgres
-target-password=welcome1
+target-password=<target-password>
 target-sslmode=disable
 target-schema=public
 # Oracle Example
@@ -154,7 +154,7 @@ target-schema=public
 #target-port=1521
 #target-dbname=hr
 #target-user=appuser
-#target-password=welcome1
+#target-password=<target-password>
 #target-sslmode=disable
 #target-schema=appuser
 

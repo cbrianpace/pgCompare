@@ -64,7 +64,7 @@ java -jar target/pgcompare.jar --version
 
 Expected output:
 ```
-Version: 0.5.0.0
+Version: 0.7.0.0
 ```
 
 ---
@@ -81,7 +81,7 @@ repo-host=localhost
 repo-port=5432
 repo-dbname=pgcompare
 repo-user=pgcompare
-repo-password=your_password
+repo-password=<repo-password>
 repo-schema=pgcompare
 repo-sslmode=prefer
 
@@ -91,7 +91,7 @@ source-host=oracle-server.example.com
 source-port=1521
 source-dbname=ORCL
 source-user=source_user
-source-password=source_password
+source-password=<source-password>
 source-schema=HR
 
 # Target Database (PostgreSQL)
@@ -100,7 +100,7 @@ target-host=postgres-server.example.com
 target-port=5432
 target-dbname=mydb
 target-user=target_user
-target-password=target_password
+target-password=<target-password>
 target-schema=hr
 ```
 
@@ -147,8 +147,12 @@ java -jar pgcompare.jar <action> [options]
 | `compare` | Perform data comparison between source and target |
 | `check` | Recompare out-of-sync rows from previous comparison |
 | `copy-table` | Copy pgCompare metadata for a table |
+| `export-config` | Export project configuration to a properties file |
+| `import-config` | Import project configuration from a properties file |
 | `export-mapping` | Export table/column mappings to YAML file |
 | `import-mapping` | Import table/column mappings from YAML file |
+| `server` | Run pgCompare as a worker process that polls the repository job queue |
+| `test-connection` | Test configured database connections |
 
 ### Options
 
@@ -163,6 +167,7 @@ java -jar pgcompare.jar <action> [options]
 | `--fix` | `-f` | Generate SQL statements to fix discrepancies (experimental) |
 | `--help` | `-h` | Display help information |
 | `--version` | `-v` | Display version information |
+| `--name <server name>` | `-n` | Server name for server mode |
 
 ---
 
@@ -170,11 +175,12 @@ java -jar pgcompare.jar <action> [options]
 
 ### Configuration Sources
 
-pgCompare supports three configuration sources with the following precedence (highest to lowest):
+pgCompare supports four configuration sources with the following precedence (highest to lowest):
 
 1. **dc_project table** - Settings stored in the repository database
 2. **Environment variables** - Prefixed with `PGCOMPARE_`
 3. **Properties file** - Default: `pgcompare.properties` in current directory
+4. **Built-in defaults** - Applied by pgCompare when no override is provided
 
 ### Environment Variable Format
 
@@ -754,7 +760,7 @@ source-host=oracle-server.example.com
 source-port=1521
 source-dbname=ORCL
 source-user=hr
-source-password=password
+source-password=<source-password>
 source-schema=HR
 ```
 
@@ -765,7 +771,7 @@ target-host=postgres-server.example.com
 target-port=5432
 target-dbname=mydb
 target-user=postgres
-target-password=password
+target-password=<target-password>
 target-schema=public
 target-sslmode=prefer
 ```
@@ -776,7 +782,7 @@ source-type=snowflake
 source-host=account.snowflakecomputing.com
 source-dbname=MYDB
 source-user=snowflake_user
-source-password=password
+source-password=<source-password>
 source-schema=PUBLIC
 source-warehouse=COMPUTE_WH
 ```
@@ -788,18 +794,18 @@ source-host=db2-server.example.com
 source-port=50000
 source-dbname=SAMPLE
 source-user=db2inst1
-source-password=password
+source-password=<source-password>
 source-schema=DB2INST1
 ```
 
 ### Known Limitations
 
-1. **Date/Timestamps**: Compared only to the second (format: DDMMYYYYHH24MISS)
-2. **Unsupported Types**: blob, long, longraw, bytea
-3. **Boolean**: Cross-platform comparison limitations
-4. **Floating Point**: Low-precision types (float, real) cannot be compared to high-precision types (double)
-5. **Float Scale**: All low-precision types cast using scale of 3 (1 for Snowflake)
-6. **Float Casting**: Use `number-cast` option to switch between `standard` and `notation` formats
+1. **Timestamps**: Date and timestamp values are compared to the second (`MMDDYYYYHH24MISS`).
+2. **Unsupported Types**: Platform-specific large objects and special-purpose types may require mapping expressions or may be excluded from comparison.
+3. **Boolean Values**: Cross-platform boolean rendering can differ by database and should be validated for each migration.
+4. **Floating Point**: Low-precision approximate types (`float`, `real`) should not be compared directly to higher-precision types unless both sides are normalized with a mapping expression.
+5. **Float Scale**: Low-precision numeric values use `float-scale` (default 3; Snowflake default 1).
+6. **Number Casting**: Use `number-cast` to switch between `standard` and `notation` formats when numeric rendering differs by platform.
 
 ---
 
@@ -808,7 +814,6 @@ source-schema=DB2INST1
 - [Handling Large Tables](large-tables-guide.md) - Parallel processing and optimization
 - [Table Filtering Guide](table-filtering-guide.md) - Advanced filtering techniques
 - [Performance Tuning](performance-tuning-guide.md) - Optimizing for your workload
-- [Quick Reference](quick-reference.md) - Command cheat sheet
 
 ---
 

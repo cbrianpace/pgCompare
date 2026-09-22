@@ -72,7 +72,7 @@ Active database statements are tracked and can be cancelled on demand, preventin
 
 New tables for server mode:
 - `dc_server`: Server registration and heartbeat tracking
-- `dc_work_queue`: Job queue with priority scheduling
+- `dc_job`: Job queue with priority scheduling
 - `dc_job_control`: Control signals for running jobs
 - `dc_job_progress`: Per-table progress tracking
 
@@ -98,7 +98,7 @@ repo-port=5432
 repo-dbname=pgcompare
 repo-schema=pgcompare
 repo-user=postgres
-repo-password=secret
+repo-password=<repo-password>
 ```
 
 Project-specific source/target database settings are loaded from the `dc_project.project_config` column.

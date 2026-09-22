@@ -23,7 +23,7 @@ This open-source project is maintained under the **Apache 2.0 License** and is m
 
 # Features
 
-- Supports Oracle, PostgreSQL, DB2, MariaDB, MySQL, and MSSQL.
+- Supports Oracle, PostgreSQL, DB2, MariaDB, MySQL, MSSQL, and Snowflake.
 - Efficient parallel comparisons using hashing.
 - Handles batch processing for performance tuning.
 - Stores configurations for multiple comparison projects in a central repository.
@@ -42,16 +42,16 @@ Before initiating the build and installation process, ensure the following prere
 
 ## Limitations
 
-- Date/Timestamps compared only to the second (format: DDMMYYYYHH24MISS).
-- Unsupported data types: blob, long, longraw, bytea.
-- Cross-platform comparison limitations with boolean type.
-- Low precission types (float, real) cannot be compared to high precission types (double).
-- All low precission types are cast using a scale of 3 (1 for Snowflake).  If a higher scale is required consider using the map-expression override option.
-- Different databases cast float to different values.  Use float-cast option to switch between char and notation (scientific notation) if there are compare problems with float data types.
+- Date and timestamp values are compared to the second (format: `MMDDYYYYHH24MISS`).
+- Unsupported data types include platform-specific large objects and special-purpose types that cannot be normalized reliably across systems.
+- Cross-platform boolean comparisons may require validation because databases render boolean values differently.
+- Low-precision numeric types (`float`, `real`) should not be compared directly to higher-precision types (`double`, `numeric`) unless a mapping expression normalizes both sides.
+- Low-precision numeric types are cast using `float-scale` (default: 3; Snowflake default: 1). If a higher scale is required, use a map-expression override.
+- Different databases can render floating-point values differently. Use `number-cast` and mapping expressions if float columns produce false differences.
 
 # Getting Started
 
-> **Note:** The `main` branch contains active development and may be unstable. For production use, we recommend checking out a stable release tag (e.g., `git checkout v0.6.0`). See [Releases](https://github.com/CrunchyData/pgCompare/releases) for available versions.
+> **Note:** The `main` branch contains active development and may be unstable. For production use, we recommend checking out a stable release tag (for example, `git checkout v0.7.0`). See [Releases](https://github.com/CrunchyData/pgCompare/releases) for available versions.
 
 ## 1. Fork the repository
 
@@ -60,7 +60,7 @@ Before initiating the build and installation process, ensure the following prere
 ```shell
 git clone --depth 1 git@github.com:<your-github-username>/pgCompare.git
 cd pgCompare
-git checkout v0.6.0  # Optional: checkout a stable release
+git checkout v0.7.0  # Optional: checkout a stable release
 mvn clean install
 ```
 
@@ -69,7 +69,7 @@ mvn clean install
 Copy `pgcompare.properties.sample` to `pgcompare.properties` and update the connection parameters for your repository, source, and target databases.
 By default, the application looks for the properties file in the execution directory. Use `PGCOMPARE_CONFIG` environment variable to specify a custom properties file location.
 
-At a minimal the `repo-xxxxx` parameters are required in the properties file (or specified by environment parameters).  Besides the properties file and environment variables, another alternative is to store the property settings in the `dc_project` table.  Settings can be stored in the `project_config` column in JSON format ({"parameter": "value"}).  Certain system parameters like log-destination can only be specified via the properties file or environment variables.
+At minimum, the `repo-*` parameters must be provided in the properties file or through environment variables. Source and target settings can also be stored in the repository in `dc_project.project_config` as JSON (for example, `{"parameter": "value"}`). Certain system parameters, such as `log-destination`, must be specified in the properties file or environment variables.
 
 You can also import/export configuration using the CLI:
 ```shell
@@ -166,6 +166,17 @@ java -jar pgcompare.jar check --batch 0
 ```
 
 # Upgrading
+
+## Version 0.7.0 Enhancements
+
+- **SQL Server Binary Support** - SQL Server `binary`, `varbinary`, and `rowversion` columns are normalized using `HASHBYTES('MD5', ...)` instead of falling through to PostgreSQL-specific `md5()` syntax.
+- **SQL Server Locale-Safe Number Casting** - SQL Server numeric casts now pin the `en-US` culture for `FORMAT()` so non-English sessions do not produce false differences due to comma decimal separators.
+- **Check-Mode Delete Convergence** - `check` now treats rows absent from both source and target as converged and clears the stale finding.
+- **Dependency Updates** - Snowflake, SQL Server, DB2, PostgreSQL, and JSON dependencies were refreshed for the 0.7.0 release.
+
+**Note:** No repository schema changes are required to upgrade from 0.6.0 to 0.7.0.
+
+For more details review the [v0.7.0 Release Notes](docs/RELEASE_NOTES_v0.7.0.md)
 
 ## Version 0.6.0 Enhancements
 
@@ -290,7 +301,7 @@ Properties are categorized into four sections: system, repository, source, and t
 
   Defines the number of rows used in mod to report progress.
 
-  Default: 1000000
+  Default: 100000000
 
 #### column-hash-method
 
@@ -336,9 +347,9 @@ Properties are categorized into four sections: system, repository, source, and t
 
 #### message-queue-size
 
-  Size of message queue used by loader threads (nbr messages).
+  Size of message queue used by loader threads (number of messages).
   
-  Default: 100
+  Default: 1000
 
 #### number-cast
 
@@ -447,7 +458,7 @@ Properties are categorized into four sections: system, repository, source, and t
 
 ## Property Precedence
 
-The system contains default values for every parameter.  These can be over-ridden using environment variables, properties file, or values saved in the `dc_project` table.  The following is the order of precedence used:
+The system contains default values for every parameter. These can be overridden using environment variables, a properties file, or values saved in the `dc_project` table. The following order of precedence is used:
 
 - Default values
 - Properties file

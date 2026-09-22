@@ -137,9 +137,9 @@ Then navigate to `http://localhost:3000`
 
 ## 🔗 Links
 
-- [Architecture Documentation](ARCHITECTURE.md)
-- [UI Quick Start](ui/QUICKSTART.md)
-- [Main README](README.md)
+- [Architecture Documentation](../ARCHITECTURE.md)
+- [UI Quick Start](../ui/QUICKSTART.md)
+- [Main README](../README.md)
 
 ---
 

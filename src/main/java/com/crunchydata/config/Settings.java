@@ -129,7 +129,7 @@ public class Settings {
         // Repository
         defaultProps.setProperty("repo-dbname","pgcompare");
         defaultProps.setProperty("repo-host","localhost");
-        defaultProps.setProperty("repo-password","welcome1");
+        defaultProps.setProperty("repo-password","");
         defaultProps.setProperty("repo-port","5432");
         defaultProps.setProperty("repo-schema","pgcompare");
         defaultProps.setProperty("repo-sslmode","disable");
@@ -138,7 +138,7 @@ public class Settings {
         // Source
         defaultProps.setProperty("source-dbname","postgres");
         defaultProps.setProperty("source-host","localhost");
-        defaultProps.setProperty("source-password","welcome1");
+        defaultProps.setProperty("source-password","");
         defaultProps.setProperty("source-port","5432");
         defaultProps.setProperty("source-schema","");
         defaultProps.setProperty("source-sslmode","disable");
@@ -150,7 +150,7 @@ public class Settings {
         // Target
         defaultProps.setProperty("target-dbname","postgres");
         defaultProps.setProperty("target-host","localhost");
-        defaultProps.setProperty("target-password","welcome1");
+        defaultProps.setProperty("target-password","");
         defaultProps.setProperty("target-port","5432");
         defaultProps.setProperty("target-schema","");
         defaultProps.setProperty("target-sslmode","disable");

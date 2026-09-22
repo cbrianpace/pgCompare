@@ -186,16 +186,16 @@ mapExpression: "COALESCE(status, 'unknown')"
 mapExpression: "LOWER(email)"
 ```
 
-## Unused Fields (Reserved)
+## Additional Fields
 
-The following fields exist in the repository schema but are not currently used. They are included in exports for completeness and future compatibility:
+Some exported fields are optional but supported by pgCompare:
 
-| Table | Field | Status |
-|-------|-------|--------|
-| `dc_table_column` | `enabled` | Implemented but may not be fully utilized in all code paths |
-| `dc_table_map` | `mod_column` | Reserved for modification tracking |
-| `dc_table_map` | `table_filter` | Reserved for row filtering during comparison |
-| `dc_table_column_map` | `map_type` | Defaults to "column"; other values reserved for future use |
+| Table | Field | Use |
+|-------|-------|-----|
+| `dc_table_column` | `enabled` | Excludes a column from comparison when `false` |
+| `dc_table_map` | `mod_column` | Column used to split work when table `parallelDegree` is greater than 1 |
+| `dc_table_map` | `table_filter` | Row-level SQL predicate appended to the source/target query for subset or delta comparisons |
+| `dc_table_column_map` | `map_type` | Mapping type; defaults to `column` |
 
 ## Workflow Examples
 
