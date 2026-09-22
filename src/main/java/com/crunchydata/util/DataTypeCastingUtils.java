@@ -48,6 +48,13 @@ public class DataTypeCastingUtils {
      * @return SQL expression for casting the column
      */
     public static String cast(String dataType, String columnName, String platform, JSONObject column) {
+        // SQL Server reports rowversion as data_type 'timestamp', but it is an 8-byte
+        // binary row-version token, not a temporal value. Without this, TIMESTAMP_TYPES
+        // matches and castTimestamp() applies AT TIME ZONE to binary data, aborting the
+        // source query. Route it to castBinary() instead.
+        if ("mssql".equals(platform) && "timestamp".equals(dataType)) {
+            return castBinary(dataType, columnName, platform);
+        }
         if (BOOLEAN_TYPES.contains(dataType)) {
             return castBoolean(dataType, columnName, platform);
         }
@@ -78,7 +85,6 @@ public class DataTypeCastingUtils {
     public static String castBinary(String dataType, String columnName, String platform) {
         return switch (platform) {
             // Snowflake TODO: Add support for binary types.
-            // MSSQL does not have a binary type.
             // Postgres and MySQL use the same function for binary types.
             case "db2" ->
                     String.format("case when dbms_lob.getlength(%1$s) = 0 or %1$s is null then '%2$s' else lower(dbms_crypto.hash(%1$s,2)) end", 
@@ -86,6 +92,12 @@ public class DataTypeCastingUtils {
             case "mariadb" -> String.format("coalesce(md5(%1$s),'0'), '%2$s')", columnName, EMPTY_STRING);
             case "oracle" ->
                     String.format("case when dbms_lob.getlength(%1$s) = 0 or %1$s is null then '%2$s' else lower(dbms_crypto.hash(%1$s,2)) end", 
+                                 columnName, EMPTY_STRING);
+            // SQL Server does have binary types (binary, varbinary, image, rowversion).
+            // HASHBYTES('MD5', ...) with CONVERT(..., 2) yields lowercase-able hex with no
+            // '0x' prefix, matching Postgres' md5() on the target side.
+            case "mssql" ->
+                    String.format("coalesce(lower(convert(varchar(max), hashbytes('MD5', cast(%1$s as varbinary(max))), 2)),'%2$s')",
                                  columnName, EMPTY_STRING);
             default -> String.format("coalesce(md5(%1$s), '%2$s')", columnName, EMPTY_STRING);
         };
@@ -181,8 +193,8 @@ public class DataTypeCastingUtils {
                         ? String.format("case when %1$s is null then '%2$s' else coalesce(if(%1$s=0,'0.0000000000e+00',concat(if(%1$s<0, '-', ''),format(abs(%1$s)/pow(10, floor(log10(abs(%1$s)))), 10),'e',if(floor(log10(abs(%1$s)))>=0,'+','-'),lpad(replace(replace(cast(FORMAT(floor(log10(abs(%1$s))), 2)/100 as char),'0.',''),'-',''),2,'0'))),'%2$s') end", columnName, EMPTY_STRING)
                         : String.format("case when %1$s is null then '%2$s' else coalesce(if(instr(cast(%1$s as char),'.')>0,concat(if(%1$s<0,'-',''),lpad(substring_index(cast(abs(%1$s) as char),'.',1),22,'0'),'.',rpad(substring_index(cast(%1$s as char),'.',-1),22,'0')),concat(if(%1$s<0,'-',''),lpad(cast(%1$s as char),22,'0'),'.',rpad('',22,'0'))),'%2$s') end", columnName, EMPTY_STRING);
                 case "mssql" -> NOTATION_CAST.equals(numberCast)
-                        ? String.format("lower(replace(coalesce(trim(format(%1$s,'E10')),'%2$s'),'E+0','e+'))", columnName, EMPTY_STRING)
-                        : String.format("coalesce(cast(format(%1$s, '%2$s') as text),'%3$s')", columnName, Props.getProperty("standard-number-format"), EMPTY_STRING);
+                        ? String.format("lower(replace(coalesce(trim(format(%1$s,'E10','en-US')),'%2$s'),'E+0','e+'))", columnName, EMPTY_STRING)
+                        : String.format("coalesce(cast(format(%1$s, '%2$s','en-US') as text),'%3$s')", columnName, Props.getProperty("standard-number-format"), EMPTY_STRING);
                 case "oracle" -> NOTATION_CAST.equals(numberCast)
                         ? String.format("lower(nvl(trim(to_char(%1$s,'0.9999999999EEEE')),'%2$s'))", columnName, EMPTY_STRING)
                         : String.format("nvl(trim(to_char(%1$s,'%2$s')),'%3$s')", columnName, Props.getProperty("standard-number-format"), EMPTY_STRING);

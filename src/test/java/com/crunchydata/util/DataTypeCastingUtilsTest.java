@@ -167,6 +167,23 @@ class DataTypeCastingUtilsTest {
         }
 
         @Test
+        @DisplayName("mssql FORMAT() pins en-US culture (issue #102 - non-English locale drift)")
+        void mssqlNumericNotationInvariantCulture() {
+            assertEquals(
+                "lower(replace(coalesce(trim(format(col,'E10','en-US')),' '),'E+0','e+'))",
+                DataTypeCastingUtils.castNumber("numeric", COL, "mssql"));
+        }
+
+        @Test
+        @DisplayName("mssql standard FORMAT() also pins en-US culture (issue #102)")
+        void mssqlNumericStandardInvariantCulture() {
+            Settings.Props.setProperty("number-cast", "standard");
+            assertEquals(
+                "coalesce(cast(format(col, '0000000000000000000000.0000000000000000000000','en-US') as text),' ')",
+                DataTypeCastingUtils.castNumber("numeric", COL, "mssql"));
+        }
+
+        @Test
         @DisplayName("standard number-cast uses configured standard-number-format")
         void postgresNumericStandard() {
             Settings.Props.setProperty("number-cast", "standard");
@@ -252,6 +269,38 @@ class DataTypeCastingUtilsTest {
             assertEquals(
                 "case when dbms_lob.getlength(col) = 0 or col is null then ' ' else lower(dbms_crypto.hash(col,2)) end",
                 DataTypeCastingUtils.castBinary("blob", COL, "oracle"));
+        }
+
+        @Test
+        @DisplayName("mssql binary uses HASHBYTES('MD5') as lowercase hex (issue #101)")
+        void mssqlBinaryHashbytes() {
+            assertEquals(
+                "coalesce(lower(convert(varchar(max), hashbytes('MD5', cast(col as varbinary(max))), 2)),' ')",
+                DataTypeCastingUtils.castBinary("varbinary", COL, "mssql"));
+        }
+
+        @Test
+        @DisplayName("mssql varbinary routes through cast() to castBinary (issue #101)")
+        void mssqlVarbinaryDispatch() {
+            assertEquals(
+                DataTypeCastingUtils.castBinary("varbinary", COL, "mssql"),
+                DataTypeCastingUtils.cast("varbinary", COL, "mssql", col(0)));
+        }
+
+        @Test
+        @DisplayName("mssql rowversion (reported as 'timestamp') routes to castBinary, not castTimestamp (issue #101)")
+        void mssqlRowversionRoutesToBinary() {
+            assertEquals(
+                DataTypeCastingUtils.castBinary("timestamp", COL, "mssql"),
+                DataTypeCastingUtils.cast("timestamp", COL, "mssql", col(0)));
+        }
+
+        @Test
+        @DisplayName("postgres 'timestamp' is unaffected - still routes to castTimestamp")
+        void postgresTimestampStillTemporal() {
+            assertEquals(
+                DataTypeCastingUtils.castTimestamp("timestamp", COL, "postgres"),
+                DataTypeCastingUtils.cast("timestamp", COL, "postgres", col(0)));
         }
     }
 
