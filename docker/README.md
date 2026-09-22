@@ -6,7 +6,7 @@ For building instructions, see the comments in the `Dockerfile`.
 
 ### Multi-stage Build (recommended)
 ```shell
-docker buildx build --load --platform linux/amd64,linux/arm64 --target multi-stage -t pgcompare:latest -t pgcompare:v0.6.0 .
+docker buildx build --load --platform linux/amd64,linux/arm64 --target multi-stage -t pgcompare:latest -t pgcompare:v0.7.0 .
 ```
 
 ### Local Build (requires pre-built artifacts)
@@ -50,7 +50,7 @@ Run a comparison batch:
 ```shell
 docker run --name pgcompare \
    -v /path/to/pgcompare.properties:/etc/pgcompare/pgcompare.properties \
-   -e PGCOMPARE_OPTIONS="--batch 0 --project 1" \
+   -e PGCOMPARE_OPTIONS="compare --batch 0 --project 1" \
    pgcompare:latest
 ```
 
@@ -70,7 +70,7 @@ Run only the web interface:
 docker run --name pgcompare-ui \
    -p 3000:3000 \
    -e PGCOMPARE_MODE=ui \
-   -e DATABASE_URL="postgresql://user:pass@host:5432/pgcompare" \
+   -e DATABASE_URL="postgresql://<user>:<password>@<host>:5432/<database>" \
    pgcompare:latest
 ```
 
@@ -81,7 +81,7 @@ docker run --name pgcompare-all \
    -p 3000:3000 \
    -v /path/to/pgcompare.properties:/etc/pgcompare/pgcompare.properties \
    -e PGCOMPARE_MODE=all \
-   -e DATABASE_URL="postgresql://user:pass@host:5432/pgcompare" \
+   -e DATABASE_URL="postgresql://<user>:<password>@<host>:5432/<database>" \
    pgcompare:latest
 ```
 
@@ -106,7 +106,7 @@ services:
       - "3000:3000"
     environment:
       PGCOMPARE_MODE: all
-      DATABASE_URL: postgresql://pgcompare:pgcompare@pgcompare-db:5432/pgcompare
+      DATABASE_URL: postgresql://<user>:<password>@pgcompare-db:5432/<database>
     volumes:
       - ./pgcompare.properties:/etc/pgcompare/pgcompare.properties
     depends_on:

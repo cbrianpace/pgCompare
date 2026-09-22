@@ -104,6 +104,7 @@ pgCompare uses a PostgreSQL repository database to store project configurations,
          │  column_hash         │       │  column_hash         │
          │  compare_result      │       │  compare_result      │
          │  thread_nbr          │       │  thread_nbr          │
+         │  fix_sql             │       │  fix_sql             │
          └──────────────────────┘       └──────────────────────┘
 
          ┌──────────────────────┐
@@ -220,6 +221,7 @@ Temporary storage for source database row hashes during comparison.
 | column_hash | varchar(100) | YES | NULL | Hash of row columns |
 | compare_result | char(1) | YES | NULL | Comparison result code |
 | thread_nbr | integer | YES | NULL | Thread number for parallel processing |
+| fix_sql | text | YES | NULL | Generated SQL to apply this source-side difference to the target |
 
 #### dc_target
 Temporary storage for target database row hashes during comparison.
@@ -234,6 +236,7 @@ Temporary storage for target database row hashes during comparison.
 | column_hash | varchar(100) | YES | NULL | Hash of row columns |
 | compare_result | char(1) | YES | NULL | Comparison result code |
 | thread_nbr | integer | YES | NULL | Thread number for parallel processing |
+| fix_sql | text | YES | NULL | Generated SQL to delete target-only rows or otherwise resolve target-side differences |
 
 #### dc_result
 Stores comparison results summary for each table.
@@ -314,11 +317,13 @@ Queue of comparison jobs to be executed by servers.
 | job_config | jsonb | YES | NULL | Additional job configuration |
 | result_summary | jsonb | YES | NULL | Summary of results |
 | error_message | text | YES | NULL | Error message if failed |
+| source | varchar(20) | NO | 'server' | Job origin: `server`, `standalone`, or `api` |
 
 **Job Types:**
 - `compare` - Full comparison of tables
-- `check` - Quick row count check
+- `check` - Recompare rows previously reported as out of sync
 - `discover` - Discover tables and columns
+- `test-connection` - Test configured database connections
 
 **Status Values:**
 - `pending` - Waiting to be claimed
@@ -326,6 +331,7 @@ Queue of comparison jobs to be executed by servers.
 - `running` - Currently executing
 - `paused` - Temporarily paused
 - `completed` - Successfully completed
+- `error` - Completed with application-level error information
 - `failed` - Failed with error
 - `cancelled` - Cancelled by user
 
@@ -358,13 +364,8 @@ Tracks progress of running jobs at the table level.
 | status | varchar(20) | NO | 'pending' | Table comparison status |
 | started_at | timestamptz | YES | NULL | When table comparison started |
 | completed_at | timestamptz | YES | NULL | When table comparison completed |
-| source_cnt | bigint | YES | 0 | Source row count |
-| target_cnt | bigint | YES | 0 | Target row count |
-| equal_cnt | bigint | YES | 0 | Count of equal rows |
-| not_equal_cnt | bigint | YES | 0 | Count of differing rows |
-| missing_source_cnt | bigint | YES | 0 | Rows missing in source |
-| missing_target_cnt | bigint | YES | 0 | Rows missing in target |
 | error_message | text | YES | NULL | Error message if failed |
+| cid | integer | YES | NULL | Comparison result ID associated with this table run |
 
 **Status Values:**
 - `pending` - Waiting to be processed
@@ -372,6 +373,19 @@ Tracks progress of running jobs at the table level.
 - `completed` - Successfully completed
 - `failed` - Failed with error
 - `skipped` - Skipped (e.g., disabled)
+
+#### dc_job_log
+Stores optional log messages associated with server-mode or standalone jobs when job logging is enabled.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| log_id | serial | NO | auto-generated | Log ID (Primary Key) |
+| job_id | uuid | NO | - | Job ID (Foreign Key to dc_job) |
+| log_ts | timestamptz | NO | current_timestamp | Log timestamp |
+| log_level | varchar(10) | NO | - | Log severity |
+| thread_name | varchar(50) | YES | NULL | Thread or component name |
+| message | text | NO | - | Log message |
+| context | jsonb | YES | NULL | Optional structured context |
 
 ---
 
@@ -386,6 +400,7 @@ Tracks progress of running jobs at the table level.
 | dc_server_idx1 | dc_server | status, last_heartbeat | Find active servers |
 | dc_job_idx1 | dc_job | status, priority DESC, created_at | Claim next job by priority |
 | dc_job_idx2 | dc_job | pid, status | Query jobs by project |
+| dc_job_log_idx1 | dc_job_log | job_id, log_ts | Query job logs by job and time |
 
 ---
 
@@ -399,6 +414,7 @@ Tracks progress of running jobs at the table level.
 | dc_job_fk1 | dc_job | pid | dc_project(pid) | CASCADE |
 | dc_job_control_fk1 | dc_job_control | job_id | dc_job(job_id) | CASCADE |
 | dc_job_progress_fk1 | dc_job_progress | job_id | dc_job(job_id) | CASCADE |
+| dc_job_log_fk1 | dc_job_log | job_id | dc_job(job_id) | CASCADE |
 
 ---
 

@@ -1,7 +1,7 @@
 # Quick Start Guide
 
 ## Prerequisites
-- Node.js 18 or higher
+- Node.js 22 or higher
 - npm (comes with Node.js)
 - PostgreSQL database with pgCompare schema
 

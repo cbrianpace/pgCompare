@@ -17,7 +17,7 @@ pgCompare is a database comparison and reconciliation tool that compares tables 
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                      COMMAND LINE PARSING                                │
 │                    CommandLineParser.parse()                             │
-│  Options: --batch, --project, --report, --table, --help, --version       │
+│  Options: --batch, --project, --report, --table, --file, --name, --help     │
 └────────────────────┬─────────────────────────────────────────────────────┘
                      │
                      ▼
@@ -38,7 +38,7 @@ pgCompare is a database comparison and reconciliation tool that compares tables 
 │  ┌──────────────┬──────────────┬──────────────┬──────────────┐           │
 │  │              │              │              │              │           │
 │  ▼              ▼              ▼              ▼              ▼           │
-│  INIT        DISCOVER       COMPARE        CHECK       COPY-TABLE        │
+│  INIT        DISCOVER       COMPARE        CHECK       SERVER/TOOLS      │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -196,9 +196,9 @@ public class CompareController
 - TableController.reconcileTables()
 - RepoController.getTables()
 - ReportController.createSummary()
-- ThreadManager.createComparison()
+- ThreadManager.executeReconciliation()
 - DataValidationThread.checkRows()
-- ResultProcessor.processResults()
+- ResultProcessor.summarizeResults()
 
 #### `TableController`
 **Purpose:** Manages table operations and processing
@@ -219,7 +219,7 @@ public class TableController
 **Calls:**
 - SQLExecutionHelper.simpleSelect()
 - CompareController.reconcileData()
-- ColumnManagementService (various methods)
+- ColumnMetadataBuilder.build()
 - ColumnMetadataBuilder.build()
 
 #### `ColumnController`
@@ -271,7 +271,7 @@ public class RepoController
 
 **Calls:**
 - SQLExecutionHelper (various methods)
-- TableManagementService (various methods)
+- SQLExecutionHelper (various methods)
 
 #### `ReportController`
 **Purpose:** Generate comparison reports and summaries
@@ -308,8 +308,8 @@ public class ReportController
 **Purpose:** Process and finalize comparison results
 ```
 public class ResultProcessor
-  + processResults(Connection connRepo, long tid, int cid): JSONObject
-  - configureDatabase(Connection connRepo)
+  + summarizeResults(Connection connRepo, long tid, JSONObject result, int cid)
+  - optimizeDatabaseForResults(Connection connRepo)
   - calculateReconciliationStats(Connection connRepo, long tid): ReconciliationStats
   - updateResultWithStats(JSONObject result, ReconciliationStats stats)
   - updateDatabaseResults(Connection connRepo, JSONObject result, int cid)
@@ -487,20 +487,15 @@ public class ObserverThread extends Thread
 **Purpose:** Manage thread lifecycle
 ```
 public class ThreadManager
-  + createComparison(Connection connRepo, Integer cid, DataComparisonTable dct,
-                    DataComparisonTableMap dctmSource, DataComparisonTableMap dctmTarget,
-                    ColumnMetadata ciSource, ColumnMetadata ciTarget)
-  - createLoaderThreads(BlockingQueue<DataComparisonResult[]> queueSource,
-                       BlockingQueue<DataComparisonResult[]> queueTarget,
-                       String stagingTableSource, String stagingTableTarget,
-                       Connection connRepo): List<DataLoaderThread>
-  - createComparisonThreads(DataComparisonTable dct, DataComparisonTableMap dctmSource,
-                           DataComparisonTableMap dctmTarget, ColumnMetadata ciSource,
-                           ColumnMetadata ciTarget, Integer cid, ThreadSync ts,
-                           BlockingQueue queueSource, BlockingQueue queueTarget,
-                           String stagingTableSource, String stagingTableTarget): List<Thread>
-  - startAllThreads(List<Thread> threads)
-  - waitForAllThreads(List<Thread> threads)
+  + executeReconciliation(DataComparisonTable dct, Integer cid,
+                          DataComparisonTableMap dctmSource,
+                          DataComparisonTableMap dctmTarget,
+                          ColumnMetadata ciSource, ColumnMetadata ciTarget,
+                          Connection connRepo)
+  - startReconcileThreads(...)
+  - startLoaderThreads(...)
+  - waitForThreadCompletion()
+  - joinThreads(List<? extends Thread> threads)
 ```
 
 **Calls:**
@@ -518,10 +513,12 @@ public class ThreadSync
   + targetComplete: boolean
   + sourceWaiting: boolean
   + targetWaiting: boolean
-  + stopObserver: boolean
+  + loaderThreadComplete: int
   
+  + incrementLoaderThreadComplete()
   + observerWait()
   + observerNotify()
+  + isShutdownRequested()
 ```
 
 ---
@@ -758,39 +755,6 @@ public class ColumnDiscoveryService
 - RepoController.saveTableColumn()
 - RepoController.saveTableColumnMap()
 
-#### `ColumnManagementService`
-**Purpose:** Manage column metadata and mappings
-```
-public class ColumnManagementService
-  + getColumnMapping(Connection connRepo, Integer tid): String
-  + getSourceColumnMetadata(JSONObject columnMap, DataComparisonTableMap dctmSource): ColumnMetadata
-  + getTargetColumnMetadata(JSONObject columnMap, DataComparisonTableMap dctmTarget, Boolean check): ColumnMetadata
-  + saveTableColumn(Connection conn, DataComparisonTableColumn dctc): DataComparisonTableColumn
-  - validateTableColumnInputs(Connection conn, DataComparisonTableColumn dctc)
-```
-
-**Calls:**
-- SQLExecutionHelper (various methods)
-- ColumnController.getColumnInfo()
-
-#### `TableManagementService`
-**Purpose:** Manage table configurations and operations
-```
-public class TableManagementService
-  + saveTable(Connection conn, DataComparisonTable dataComparisonTable): DataComparisonTable
-  + saveTableMap(Connection conn, DataComparisonTableMap dataComparisonTableMap)
-  + getTables(Integer pid, Connection conn, Integer batchNbr, String table, Boolean check): CachedRowSet
-  + completeTableHistory(Connection conn, Integer tid, Integer batchNbr, 
-                        Integer rowCount, String actionResult)
-  + deleteDataCompare(Connection conn, Integer tid, Integer batchNbr)
-  - buildGetTablesSQL(Integer batchNbr, String table, Boolean check): String
-  - buildGetTablesBinds(Integer pid, Integer batchNbr, String table): ArrayList<Object>
-```
-
-**Calls:**
-- SQLExecutionHelper (various methods)
-- LoggingUtils.write()
-
 #### `StagingTableService`
 **Purpose:** Manage staging tables for data loading
 ```
@@ -988,7 +952,7 @@ CompareController.performCompare()
     │   └─> For each table:
     │       ├─> TableController.getTableMap()
     │       │   └─> SQLExecutionHelper.simpleSelect()
-    │       ├─> ColumnManagementService.getColumnMapping()
+    │       ├─> ColumnMetadataBuilder.build()
     │       │   └─> SQLExecutionHelper.simpleSelectReturnString()
     │       ├─> ColumnController.getColumnInfo()
     │       │   └─> ColumnMetadataBuilder.build()
@@ -1002,7 +966,7 @@ CompareController.performCompare()
     │       │   │           ├─> SQLFixGenerationService.generateDeleteSQL()
     │       │   │           ├─> SQLFixGenerationService.generateInsertSQL()
     │       │   │           └─> SQLFixGenerationService.generateUpdateSQL()
-    │       │   ├─> [IF compare] ThreadManager.createComparison()
+    │       │   ├─> [IF compare] ThreadManager.executeReconciliation()
     │       │   │   ├─> StagingTableService.createStagingTable()
     │       │   │   ├─> Create threads:
     │       │   │   │   ├─> DataComparisonThread (source)
@@ -1013,7 +977,7 @@ CompareController.performCompare()
     │       │   │   ├─> Start all threads
     │       │   │   ├─> Wait for completion
     │       │   │   └─> StagingTableService.dropStagingTable()
-    │       │   └─> ResultProcessor.processResults()
+    │       │   └─> ResultProcessor.summarizeResults()
     │       │       ├─> SQLExecutionHelper.simpleUpdate() [mark missing/not equal]
     │       │       └─> SQLExecutionHelper.simpleUpdateReturning() [update counts]
     │       └─> RepoController.completeTableHistory()
@@ -1063,9 +1027,9 @@ ApplicationContext.executeAction() [ACTION: discover]
     │   ├─> DatabaseMetadataService.getTables()
     │   │   └─> Execute platform-specific SQL
     │   ├─> For each table:
-    │   │   ├─> TableManagementService.saveTable()
+    │   │   ├─> RepoController.saveTableColumn()
     │   │   │   └─> SQLExecutionHelper.simpleUpdateReturningInteger()
-    │   │   └─> TableManagementService.saveTableMap()
+    │   │   └─> RepoController.saveTableColumnMap()
     │   │       └─> SQLExecutionHelper.simpleUpdate()
     │   └─> SQLExecutionHelper.simpleUpdate() [cleanup]
     └─> DiscoverController.discoverColumns()
@@ -1110,8 +1074,8 @@ ApplicationContext.executeAction() [ACTION: discover]
                     ┌───────────────┼────────────────┐   │
                     │               │                │   │
                     ▼               ▼                ▼   ▼
-         TableManagementService  ThreadManager  ResultProcessor
-         ColumnManagementService      │              │
+         RepoController       ThreadManager  ResultProcessor
+          ColumnMetadataBuilder      │              │
          ColumnDiscoveryService       │              │
          DatabaseConnectionService    │              │
                                       ▼              │

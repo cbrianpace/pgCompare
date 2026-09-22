@@ -12,7 +12,7 @@ A Next.js-based web application for viewing and editing pgCompare configuration 
 - **Dark/Light Mode**: Toggle between dark and light themes, with preference saved locally
 - **Responsive Design**: Modern, responsive UI built with Tailwind CSS
 
-### Server Mode Features (v0.6.0)
+### Server Mode Features (introduced in v0.6.0)
 
 - **Dashboard Overview**: Real-time server status monitoring with heartbeat tracking
 - **Job Scheduling**: Schedule compare, check, or discover jobs from the UI
@@ -23,7 +23,7 @@ A Next.js-based web application for viewing and editing pgCompare configuration 
 
 ## Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 22+ and npm
 - PostgreSQL database with pgCompare schema
 
 ## Installation
@@ -50,7 +50,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Database Schema
 
-The application expects the following tables in your PostgreSQL database:
+The application expects a PostgreSQL repository initialized with the pgCompare schema. Core tables include:
 
 - `dc_project` - Project configurations
 - `dc_result` - Comparison results
@@ -58,6 +58,15 @@ The application expects the following tables in your PostgreSQL database:
 - `dc_table_map` - Table mapping configurations (source/target)
 - `dc_table_column` - Column definitions
 - `dc_table_column_map` - Column mapping configurations
+- `dc_source` / `dc_target` - Out-of-sync row findings and generated fix SQL
+
+Server mode and job management use additional tables:
+
+- `dc_server` - Server registration and heartbeat state
+- `dc_job` - Job queue
+- `dc_job_control` - Pause/resume/stop/terminate signals
+- `dc_job_progress` - Per-table job progress
+- `dc_job_log` - Optional job log messages
 
 ## Usage
 
@@ -84,7 +93,7 @@ npm start
 
 ## Technology Stack
 
-- **Framework**: Next.js 15 with App Router
+- **Framework**: Next.js 16 with App Router
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
 - **Database**: PostgreSQL (via node-postgres)

@@ -238,7 +238,12 @@ public class DataValidationThread {
             rowResult.put("pk", dcRow.getPk());
             rowResult.put("pkHash", dcRow.getPkHash());
 
-            if (sourceRow.size() > 0 && targetRow.size() == 0) {
+            if (sourceRow.size() == 0 && targetRow.size() == 0) {
+                // Row is gone from both sides: the delete landed between compare and check.
+                // This is convergence, not drift - keep IN_SYNC_STATUS so the finding is
+                // removed from staging. Without this branch the else below assumes both rows
+                // exist and dereferences an empty CachedRowSet (Array index out of range: 0).
+            } else if (sourceRow.size() > 0 && targetRow.size() == 0) {
                 rowResult.put("compareStatus", OUT_OF_SYNC_STATUS);
                 rowResult.put("compareResult", MISSING_TARGET);
                 rowResult.put("missingTarget", 1);

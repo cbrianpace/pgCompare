@@ -1,4 +1,4 @@
-create user pgctest identified by "welcome1";
+create user pgctest identified by "pgcompare_test_password";
 grant unlimited tablespace to pgctest;
 grant connect,resource to pgctest;
 
